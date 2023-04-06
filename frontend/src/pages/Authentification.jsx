@@ -1,19 +1,21 @@
+import PropTypes from "prop-types";
 import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
-import logo from "../assets/logo_irene.png";
-import background from "../assets/background_authent.heif";
-import "../App.css";
+import SharedContext from "../contexts/sharedContext";
 import Text from "../components/forms/Text";
 import Modal from "../components/Modal";
-import SharedContext from "../contexts/sharedContext";
+import "../App.css";
+import logo from "../assets/logo_irene.heif";
+import LogoSncf from "../assets/pour_nous_tous.heif";
+import background from "../assets/background_authent.heif";
 
 const initialValues = {
   registration_number: "",
   password: "",
 };
 
-export default function Authentification({ setToken }) {
-  const { setIsLoading, baseURL } = useContext(SharedContext);
+export default function Authentification({ setRefreshToken }) {
+  const { setIsLoading, setIsLogged, customFetch } = useContext(SharedContext);
   const [inputValue, setInputValue] = useState(initialValues);
   const [error, setError] = useState();
 
@@ -25,81 +27,129 @@ export default function Authentification({ setToken }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     setInputValue(initialValues);
-
     setIsLoading(true);
-    fetch(`${baseURL}/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(inputValue),
-    })
-      .then((response) => response.json())
-      .then((response) => {
-        if (response.token) {
-          localStorage.setItem("IRENE_AUTH", response.token);
-          setToken(response.token);
-        } else {
-          setError("Saisie incorrecte.");
-        }
+    customFetch(`${import.meta.env.VITE_BACKEND_URL}/login`, "POST", inputValue)
+      .then((responseData) => {
+        setRefreshToken(responseData.irene_refresh);
+        localStorage.setItem("IRENE_TOKEN", responseData.irene_refresh);
+        setIsLogged(true);
         setIsLoading(false);
       })
       .catch(() => {
         setError("Saisie incorrecte.");
         setIsLoading(false);
+        setIsLogged(false);
       });
   };
 
   return (
-    <main
-      className="w-100 h-100 container-fluid d-flex justify-content-center align-items-center p-0 m-0 "
-      style={{
-        background: `center / cover url(${background})`,
-      }}
-    >
-      <div
-        className="p-0 d-flex-fluid flex-column h-auto rounded justify-content-center align-item-center text-center"
+    <>
+      <main
+        className="p-0 m-0 container-fluid d-flex justify-content-center align-items-center h-100 w-100"
         style={{
-          maxWidth: "300px",
-          backgroundColor: "rgba(242, 242, 242, 0.5)",
+          background: `center / cover url(${background})`,
         }}
+      />
+      <div
+        className="modal show d-block"
+        tabIndex="-1"
+        role="dialog"
+        aria-labelledby="auth"
       >
-        <img className="w-25 m-4" src={logo} alt="Logo" />
-        <h1 className="title">IRENE</h1>
-        <h4 className="slogan">Développons vos idées</h4>
-        <form onSubmit={handleSubmit} className="mb-0">
-          <div className="mt-3 w-50 mx-auto mb-0">
-            <Text
-              label="Identifiant"
-              id="registration_number"
-              onChange={handleChange}
-              value={inputValue.registration_number}
-            />
+        <div
+          className="modal-dialog modal-dialog-centered modal-dialog-scrollable rounded "
+          role="document"
+        >
+          <div
+            className="modal-content px-2 border overflow-auto"
+            style={{
+              maxWidth: "300px",
+              backgroundColor: "rgba(242, 242, 242, .5)",
+            }}
+          >
+            <div className="modal-header flex-column align-item-center justify-content-center">
+              <h1 className="modal-title text-center w-100" id="auth">
+                IRENE
+              </h1>
+              <h3 className="py-1 text-center w-100">Développons vos idées</h3>
+              <img
+                className="logo img-fluid w-75 mx-auto"
+                src={logo}
+                alt="Logo"
+              />
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body d-flex flex-column justify-content-center align-items-center">
+                <div className="mx-auto">
+                  <Text
+                    label="Identifiant"
+                    id="registration_number"
+                    className="px-2 py-1 border border-warning"
+                    onChange={handleChange}
+                    value={inputValue.registration_number}
+                  />
+                </div>
+                <div className="mx-auto">
+                  <Text
+                    label="Mot de passe"
+                    id="password"
+                    className="px-2 py-1 border border-warning"
+                    onChange={handleChange}
+                    value={inputValue.password}
+                    type="password"
+                  />
+                </div>
+                {error && (
+                  <span className="text-danger d-flex justify-content-center">
+                    {error}
+                  </span>
+                )}
+              </div>
+              <div className="modal-footer text-center flex-column align-item-center justify-content-center">
+                <input
+                  type="submit"
+                  value="Se connecter"
+                  className="btn-connect btn btn-warning mb-3 row mx-auto"
+                />
+                <Modal />
+                <div className="about text-center mx-auto mt-2">
+                  <Link
+                    className="text-dark"
+                    to={`${import.meta.env.VITE_FRONTEND_URI}/about`}
+                  >
+                    A propos
+                  </Link>
+                </div>
+                <img
+                  src={LogoSncf}
+                  style={{
+                    width: "auto",
+                  }}
+                  className="d-sm-none d-block mt-2"
+                  alt="logoSncf"
+                />
+              </div>
+            </form>
           </div>
-          <div className="mt-0 mb-0 w-50 mx-auto mb-0">
-            <Text
-              label="Mot de passe"
-              id="password"
-              onChange={handleChange}
-              value={inputValue.password}
-              type="password"
-            />
-          </div>
-          {error && <span className="text-danger">{error}</span>}
-
-          <input
-            type="submit"
-            value="Se connecter"
-            className="btn-connect btn btn-warning m-3"
+          <img
+            src={LogoSncf}
+            style={{
+              width: "auto",
+              right: "30px",
+              bottom: "10px",
+            }}
+            className="d-none d-sm-block position-fixed"
+            alt="logoSncf"
           />
-          <Modal />
-          <div className="lead mt-2 mb-4">
-            <Link className="text-dark" to="/about">
-              A propos
-            </Link>
-          </div>
-        </form>
+        </div>
       </div>
-    </main>
+    </>
   );
 }
+
+Authentification.propTypes = {
+  setRefreshToken: PropTypes.func,
+};
+Authentification.defaultProps = {
+  setRefreshToken: null,
+};

@@ -2,7 +2,7 @@ const models = require("../models");
 
 const browse = (req, res) => {
   models.organisation
-    .findAll()
+    .findAll(req.perms.manage_all || req.perms.manage_organisations)
     .then(([rows]) => {
       res.send(rows);
     })
@@ -63,9 +63,27 @@ const destroy = (req, res) => {
     });
 };
 
+const batchDestroy = (req, res) => {
+  const ids = req.query.ids.split(",").filter((id) => !Number.isNaN(id));
+  models.organisation
+    .deleteIds(ids)
+    .then((result) => {
+      if (result.affectedRows === 0) {
+        res.sendStatus(404);
+      } else {
+        res.sendStatus(204);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      res.sendStatus(500);
+    });
+};
+
 module.exports = {
   browse,
   edit,
   add,
   destroy,
+  batchDestroy,
 };

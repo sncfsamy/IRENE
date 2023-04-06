@@ -3,7 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import SharedContext from "../contexts/sharedContext";
 import bgImage from "../assets/idea_default_picture.heif";
 import "../assets/ck-content.css";
-import CategorieSelector from "@components/CategorieSelector";
+import Selector from "../components/Selector";
+import Comments from "../components/Comments";
+import ManagerCommentForm from "../components/ManagerCommentForm";
+import FilesAndUploads from "../components/FilesAndUploads";
+import Error404 from "./Error404";
 
 const dateOptions = {
   weekday: "long",
@@ -13,9 +17,8 @@ const dateOptions = {
 };
 
 export default function InnovationDisplay() {
-  const [displayShow, setDisplayShow] = useState({
+  const [ideaData, setIdeaData] = useState({
     idea: {
-      user_id: 0,
       name: "",
       id: 0,
       description: "",
@@ -26,536 +29,1149 @@ export default function InnovationDisplay() {
       problem: "",
       solution: "",
       gains: "",
+      id_organisation: 1,
       categories: [],
     },
-    users: [
-      {
-        id: 0,
-        lastname: "",
-        firstname: "",
-      },
+    authors: [],
+    assets: [
+      { assets: [], total: 0 },
+      { assets: [], total: 0 },
+      { assets: [], total: 0 },
+      { assets: [], total: 0 },
     ],
-    coauthors: [],
   });
   const detailedStatus = [
     "En cours de rédaction",
     "Attente validation manager",
     "Attente validation ambassadeur",
     "Cloturée avec succès",
+    "En attente d'approfondissement",
     "Refusée",
   ];
 
   const { id } = useParams();
-  const { baseURL, token, user, setIsLoading, darkMode } =
-    useContext(SharedContext);
+  const {
+    user,
+    categories,
+    organisations,
+    teams,
+    isLoading,
+    setIsLoading,
+    darkMode,
+    customFetch,
+  } = useContext(SharedContext);
   const [notesHover, setNotesHover] = useState(0);
-  const [loadingVote, setLoadingVote] = useState(false);
+  const [modalAction, setModalAction] = useState({});
+  const [managerComment, setManagerComment] = useState("");
+  const [managerCommentErrors, setManagerCommentErrors] = useState([]);
+  const [perms, setPerms] = useState({});
+  const [commentsLoaded, setCommentsLoaded] = useState([
+    false,
+    false,
+    false,
+    false,
+  ]);
+  const [poster, setPoster] = useState(
+    ideaData.assets.find((asset) => asset.field === 0 && !asset.id_comment)
+  );
   const imageModalRef = useRef(null);
-  let author = user;
-  let coauthors = [];
-  if (displayShow.idea.user_id) {
-    author = displayShow.users.find((el) => el.id === displayShow.idea.user_id);
-  }
-  if (displayShow.coauthors && displayShow.coauthors.length) {
-    coauthors = displayShow.coauthors.map((coauthor) =>
-      displayShow.users.find((el) => el.id === coauthor.user_id)
-    );
-  }
   useEffect(() => {
     setIsLoading(true);
-    fetch(`${baseURL}/ideas/${id}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((response) => {
-        const noted_by = response.idea.noted_by
-          ? response.idea.noted_by
-              .split(",")
-              .filter((v) => v != "" && v != ",")
-              .map((v) => parseInt(v, 10))
-          : [];
+    customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`, "GET").then(
+      (response) => {
         const note =
-          noted_by.length > 0 ? response.idea.note / noted_by.length : 0;
-        setDisplayShow({
+          response.idea.noted_by > 0
+            ? response.idea.note / response.idea.noted_by
+            : 0;
+        setIdeaData({
           ...response,
           idea: {
             ...response.idea,
-            noted_by,
             final_note: note,
           },
         });
+
+        setPerms({
+          isManager:
+            user.perms.manage_ideas_manager &&
+            response.authors.find((autor) => autor.is_author).id_team ===
+              user.id_team,
+          isAmbassador:
+            user.perms.manage_ideas_ambassador &&
+            response.idea.id_organisation === user.id_organisation,
+          isAdmin: user.perms.manage_ideas_all || user.perms.manage_all,
+        });
+
+        console.warn(
+          response.comments[0].total,
+          response.comments[0].comments.length
+        );
+        console.warn(
+          response.comments[1].total,
+          response.comments[1].comments.length
+        );
+        console.warn(
+          response.comments[2].total,
+          response.comments[2].comments.length
+        );
+        console.warn(
+          response.comments[3].total,
+          response.comments[3].comments.length
+        );
+        setPoster(
+          response.assets.find(
+            (asset) => asset.field === 0 && !asset.id_comment
+          )
+        );
+        $(() => {
+          $('[data-toggle="popover"]').popover("dispose");
+          $('[data-toggle="popover"]').popover();
+        });
         setIsLoading(false);
-      });
-    $(function () {
-      $('[data-toggle="popover"]').popover();
-    });
+      }
+    );
   }, []);
   const setNoteHover = (e) => {
-    if (Array.isArray(displayShow.idea.noted_by)) {
-      if (!displayShow.idea.noted_by.includes(user.id)) {
-        const nb = parseInt(e.target.dataset.id, 10);
-        setNotesHover(nb);
-      } else setNotesHover(0);
+    if (ideaData.idea.id_user !== user.id_user) {
+      const nb = parseInt(e.target.dataset.id, 10);
+      setNotesHover(nb);
+    } else {
+      setNotesHover(0);
     }
   };
-  const setNoteOut = (e) => {
+  const setNoteOut = () => {
     setNotesHover(0);
   };
-  const handleNoteClick = (e) => {
-    const userNote = notesHover;
-    if (
-      Array.isArray(displayShow.idea.noted_by) &&
-      !displayShow.idea.noted_by.includes(`${user.id}`)
-    ) {
-      fetch(`${baseURL}/note/${displayShow.idea.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ note: userNote }),
-      }).then((response) => {
-        if (response.ok) {
+  const handleNoteClick = () => {
+    if (ideaData.idea.id_user !== user.id_user) {
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/note/${ideaData.idea.id_idea}`,
+        "PUT",
+        {
+          note: notesHover,
+        }
+      )
+        .then(() => {
           setNoteOut();
           document.activeElement?.blur();
-          const totalVotes = [...displayShow.idea.noted_by].push(user.id);
-          setDisplayShow({
-            ...displayShow,
+          setIdeaData({
+            ...ideaData,
             idea: {
-              ...displayShow.idea,
-              note: displayShow.idea.note + userNote,
-              noted_by: totalVotes,
-              final_note: (displayShow.idea.note + userNote) / totalVotes,
+              ...ideaData.idea,
+              note: ideaData.idea.note + notesHover,
+              noted_by: ideaData.idea.noted_by + 1,
+              final_note:
+                (ideaData.idea.note + notesHover) /
+                (ideaData.idea.noted_by + 1),
+              id_user: user.id_user,
             },
           });
-        }
-      });
+        })
+        .catch();
     }
   };
-  return (
-    <main className="container h-100 d-flex flex-column mt-3 pb-5">
-      <div
-        className="rounded-top m-0 p-0 h-100 w-100 border"
-        style={{ background: `center / cover no-repeat url(${bgImage})` }}
-      >
-        <div
-          className="m-0 p-0 h-100 w-100 rounded"
-          style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+  const handleSubmitComment = (
+    comment,
+    field,
+    setFormShowed,
+    setErrors,
+    idParentComment = null
+  ) => {
+    return new Promise((resolve, reject) => {
+      const commentContent = {
+        comment,
+        field: parseInt(field, 10),
+        id_user: user.id_user,
+        id_idea: ideaData.idea.id_idea,
+        id_parent_comment: idParentComment,
+      };
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/comments`,
+        "POST",
+        commentContent
+      )
+        .then((result) => {
+          const idComment = parseInt(result.idComment, 10);
+          if (Number.isNaN(id)) {
+            setErrors(result.errors);
+            reject();
+          } else {
+            const newIdeaData = { ...ideaData };
+            newIdeaData.comments[field].comments.unshift({
+              ...commentContent,
+              id_comment: idComment,
+              created_at: Math.floor(new Date(Date.now()).getTime()),
+              id_team: user.id_team,
+              id_organisation: user.id_organisation,
+              firstname: user.firstname,
+              lastname: user.lastname,
+            });
+            newIdeaData.comments[field].total += 1;
+            resolve();
+            setIdeaData(newIdeaData);
+            setFormShowed(false);
+          }
+        })
+        .catch((err) => {
+          setErrors(err);
+          reject();
+        });
+    });
+  };
+  const handleAction = () => {
+    if (
+      modalAction.action !== "delete" &&
+      (perms.isManager || perms.isAmbassador || perms.isAdmin)
+    ) {
+      let data = {};
+      if (
+        modalAction.action === "validateAmbassador" &&
+        (perms.isAmbassador || perms.isAdmin)
+      ) {
+        data = { ambassador_validated_at: 1, status: 2 };
+      }
+      if (
+        modalAction.action === "validateManager" &&
+        (perms.isManager || perms.isAdmin)
+      ) {
+        data = { manager_validated_at: 1, status: 3 };
+      }
+      if (
+        modalAction.action === "reject" &&
+        (perms.isAdmin || perms.isAmbassador || perms.isManager)
+      ) {
+        data = { status: 5 };
+      }
+      if (
+        modalAction.action === "deepen" &&
+        (perms.isAdmin || perms.isAmbassador || perms.isManager)
+      ) {
+        data = { status: 4 };
+      }
+      handleSubmitComment(managerComment, 0, () => {}, setManagerCommentErrors)
+        .then(() => {
+          customFetch(
+            `${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`,
+            "PUT",
+            data
+          ).then(() => {
+            if (modalAction.action !== "delete") {
+              const newIdea = ideaData.idea;
+              if (modalAction.action === "validateManager") {
+                newIdea.status = 2;
+                newIdea.manager_validated_at = new Date().getTime() / 1000;
+              } else if (modalAction.action === "validateAmbassador") {
+                newIdea.status = 3;
+                newIdea.ambassador_validated_at = new Date().getTime() / 1000;
+              } else if (modalAction.action === "deepen") {
+                newIdea.status = 4;
+              } else if (modalAction.action === "reject") {
+                newIdea.status = 5;
+              }
+              setIdeaData({
+                ...ideaData,
+                idea: newIdea,
+              });
+              $(() => {
+                $('[data-toggle="popover"]').popover("dispose");
+                $('[data-toggle="popover"]').popover();
+              });
+            }
+            setTimeout(setModalAction, 1000, {});
+          });
+        })
+        .catch();
+    }
+  };
+  const handleActionSelect = (e) => {
+    e.preventDefault();
+    setManagerComment("");
+    switch (e.target.dataset.action) {
+      case "validateManager":
+        setModalAction({
+          title: "Valider",
+          message: "Êtes-vous sûr de vouloir valider cette innovation ?",
+          targetStatus: 2,
+          buttonClass: "btn-success",
+          buttonText: "Valider cette innovation",
+          action: e.target.dataset.action,
+        });
+        break;
+      case "validateAmbassador":
+        setModalAction({
+          title: "Valider",
+          message: "Êtes-vous sûr de vouloir valider cette innovation ?",
+          targetStatus: 3,
+          buttonClass: "btn-success",
+          buttonText: "Valider cette innovation",
+          action: e.target.dataset.action,
+        });
+        break;
+      case "reject":
+        setModalAction({
+          title: "Refuser",
+          message: "Êtes vous sûr de vouloir rejeter cette innovation ?",
+          targetStatus: 5,
+          buttonClass: "btn-warning",
+          buttonText: "Refuser cette innovation",
+          action: e.target.dataset.action,
+        });
+        break;
+      case "delete":
+        setModalAction({
+          title: "Supprimer",
+          message: "Êtes vous certains de vouloir supprimer cette innovation ?",
+          buttonClass: "btn-danger",
+          buttonText: "Supprimer cette innovation",
+          action: e.target.dataset.action,
+        });
+        break;
+      case "deepen":
+        setModalAction({
+          title: "Demande d'approfondissement",
+          message: `Êtes vous certains de vouloir demander l'approfondissement de cette innovation ?<br /><br />${
+            ideaData.authors.find((author) => author.is_author).firstname
+          } ${
+            ideaData.authors.find((author) => author.is_author).lastname
+          } sera notifié(e) de votre demande d'approfondissement.<br /><br />${
+            ideaData.authors.find((author) => author.is_author).firstname
+          } ${
+            ideaData.authors.find((author) => author.is_author).lastname
+          } devra revoir son innovation et la finaliser de nouveau.<br /><br />
+            De plus les dates de validation seront réinitialisées et l'innovation devra de nouveau être validée par le manager et l'ambassadeur.${
+              ideaData.idea.status === 5
+                ? '<br /><br /><span class="text-danger">Attention: Cela annulera le refus de cette innovation.</span>'
+                : ""
+            }<br /><br />`,
+          buttonClass: "btn-info",
+          targetStatus: 4,
+          buttonText: "Demander l'approfondissement",
+          action: e.target.dataset.action,
+        });
+        break;
+      default:
+    }
+  };
+  let showing = "show";
+  if (
+    (ideaData &&
+      ideaData.idea &&
+      ideaData.authors.find((author) => author.is_author) &&
+      ideaData.authors.find((author) => author.is_author).id_user !==
+        user.id_user &&
+      (ideaData.idea.status === 0 || ideaData.idea.status === 4) &&
+      !user.perms.manage_all) ||
+    !ideaData.idea ||
+    !ideaData.idea.name ||
+    ideaData.idea.name.length === 0
+  )
+    showing = "404";
+  else if (isLoading) showing = "loading";
+  switch (showing) {
+    case "404":
+      return <Error404 />;
+    case "loading":
+      return "";
+    default:
+      return (
+        <main
+          className={`container h-100 flex-column my-3 pb-5 pt-2 px-2 rounded ${
+            darkMode === 0 ? "bg-white" : ""
+          }`}
+          style={{
+            backgroundColor: `${darkMode === 2 ? "#4d4f53" : ""}${
+              darkMode === 1 ? "#e9e9e9" : ""
+            }`,
+          }}
         >
-          <h1 className="rounded-top font-weight-bold p-2 display-1">
-            Idée #{displayShow.idea.id} - {displayShow.idea.name}
-          </h1>
-          <ul className="meta-list font-weight-medium ml-2">
-            <li className="meta-list-item text-secondary">
-              Par{" "}
-              <Link
-                to={`/user/${author.id}`}
-              >{`${author.firstname} ${author.lastname}`}</Link>
-            </li>
-            {displayShow.coauthors.length
-              ? displayShow.coauthors.map((coauthor) => (
-                  <li
-                    key={coauthor.coauthor_id}
-                    className="meta-list-item text-secondary separator"
-                  >
-                    <Link to={`/user/${coauthor.coauthor_id}`}>{`${
-                      displayShow.users.find(
-                        (u) => u.id === coauthor.coauthor_id
-                      ).firstname
+          <div className="rounded-top m-0 p-0 h-100 w-100 border poster-hover">
+            <div
+              style={{
+                background: `center / cover no-repeat url(${
+                  poster
+                    ? `${import.meta.env.VITE_BACKEND_URL}/uploads/idea_${id}/${
+                        poster.file_name
+                      }`
+                    : bgImage
+                })`,
+              }}
+            >
+              <div
+                className="m-0 p-0 h-100 w-100 rounded-top"
+                style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+              >
+                <h1 className="rounded-top font-weight-bold p-2 display-1">
+                  <i
+                    className="icons-document icons-size-3x mx-2"
+                    aria-hidden="true"
+                  />
+                  Idée #{ideaData.idea.id_idea} -{" "}
+                  {ideaData.idea.name[0].toUpperCase()}
+                  {ideaData.idea.name.substring(1)}
+                </h1>
+                <ul className="meta-list font-weight-medium ml-2">
+                  <li className="meta-list-item text-white">
+                    Par{"  "}&nbsp;&nbsp;
+                    <Link
+                      to={`${import.meta.env.VITE_FRONTEND_URI}/user/${
+                        ideaData.authors.find((author) => author.is_author)
+                          .id_user
+                      }`}
+                    >{`${
+                      ideaData.authors.find((author) => author.is_author)
+                        .firstname
                     } ${
-                      displayShow.users.find(
-                        (u) => u.id === coauthor.coauthor_id
-                      ).lastname
-                    }`}</Link>
+                      ideaData.authors.find((author) => author.is_author)
+                        .lastname
+                    }`}</Link>{" "}
+                    (
+                    {`${
+                      organisations.find(
+                        (organisation) =>
+                          organisation.id_organisation ===
+                          ideaData.authors.find((author) => author.is_author)
+                            .id_organisation
+                      ).name
+                    }/${
+                      teams.find(
+                        (team) =>
+                          team.id_team ===
+                          ideaData.authors.find((author) => author.is_author)
+                            .id_team
+                      ).name
+                    } `}
+                    )
                   </li>
-                ))
-              : ""}
-          </ul>
-          <ul className="meta-list font-weight-medium ml-2">
-            <li className="meta-list-item text-secondary">
-              Créée le{" "}
-              {new Date(displayShow.idea.created_at).toLocaleDateString(
-                "fr-FR",
-                dateOptions
-              )}
-            </li>
-          </ul>
-          {user.role_id > 1 && displayShow.idea.finished_at ? (
-            <ul className="meta-list font-weight-medium ml-2">
-              <li className="meta-list-item text-secondary">
-                Finalisée le{" "}
-                {new Date(displayShow.idea.finished_at).toLocaleDateString(
-                  "fr-FR",
-                  dateOptions
+                  {ideaData.authors.find((author) => !author.is_author)
+                    ? ideaData.authors
+                        .filter((author) => !author.is_author)
+                        .map((coauthor) => (
+                          <li
+                            key={coauthor.id_user}
+                            className="meta-list-item text-white separator"
+                          >
+                            <Link
+                              to={`${import.meta.env.VITE_FRONTEND_URI}/user/${
+                                coauthor.id_user
+                              }`}
+                            >{`${coauthor.firstname} ${coauthor.lastname}`}</Link>{" "}
+                            (
+                            {`${
+                              organisations.find(
+                                (organisation) =>
+                                  organisation.id_organisation ===
+                                  coauthor.id_organisation
+                              ).name
+                            }/${
+                              teams.find(
+                                (team) => team.id_team === coauthor.id_team
+                              ).name
+                            } `}
+                            )
+                          </li>
+                        ))
+                    : ""}
+                </ul>
+                <ul className="meta-list font-weight-medium ml-2">
+                  <li className="meta-list-item text-secondary text-white">
+                    Créée le{" "}
+                    {new Date(ideaData.idea.created_at).toLocaleDateString(
+                      "fr-FR",
+                      dateOptions
+                    )}
+                  </li>
+                </ul>
+                {user.role_id > 1 && ideaData.idea.finished_at ? (
+                  <ul className="meta-list font-weight-medium ml-2">
+                    <li className="meta-list-item text-secondary text-white">
+                      Finalisée le{" "}
+                      {new Date(ideaData.idea.finished_at).toLocaleDateString(
+                        "fr-FR",
+                        dateOptions
+                      )}
+                    </li>
+                  </ul>
+                ) : (
+                  ""
                 )}
-              </li>
-            </ul>
-          ) : (
-            ""
-          )}
-          {user.role_id > 1 && displayShow.idea.manager_validated_at ? (
-            <ul className="meta-list font-weight-medium ml-2">
-              <li className="meta-list-item text-secondary">
-                Validée manager le{" "}
-                {new Date(
-                  displayShow.idea.manager_validated_at
-                ).toLocaleDateString("fr-FR", dateOptions)}
-              </li>
-            </ul>
-          ) : (
-            ""
-          )}
-          <ul className="meta-list font-weight-medium ml-2">
-            {user.role_id > 2 && displayShow.idea.ambassador_validated_at ? (
-              <li className="meta-list-item text-secondary">
-                Validée ambassadeur le{" "}
-                {new Date(
-                  displayShow.idea.ambassador_validated_at
-                ).toLocaleDateString("fr-FR", dateOptions)}
-              </li>
-            ) : (
-              ""
-            )}
-          </ul>
-          <ul className="meta-list font-weight-medium ml-2">
-            <li className="meta-list-item text-secondary">
-              👁️‍🗨️ {displayShow.idea.views}
-            </li>
-            <li
-              className="meta-list-item text-secondary separator"
-              onMouseLeave={() => setNotesHover(0)}
-              data-id="note"
-            >
-              <button
-                type="button"
-                onClick={handleNoteClick}
-                className="btn btn-link"
-                disabled={notesHover === 0}
-              >
-                <i
-                  data-id="1"
-                  onMouseEnter={setNoteHover}
-                  onMouseLeave={setNoteOut}
-                  className={`icons-bookmark icons-size-1x25 ${
-                    notesHover >= 1 ? "text-danger" : ""
-                  } ${
-                    displayShow.idea.final_note >= 1 && notesHover < 1
-                      ? "text-warning"
-                      : ""
+                {user.role_id > 1 && ideaData.idea.manager_validated_at ? (
+                  <ul className="meta-list font-weight-medium ml-2">
+                    <li className="meta-list-item text-secondary text-white">
+                      Validée manager le{" "}
+                      {new Date(
+                        ideaData.idea.manager_validated_at
+                      ).toLocaleDateString("fr-FR", dateOptions)}
+                    </li>
+                  </ul>
+                ) : (
+                  ""
+                )}
+                <ul className="meta-list font-weight-medium ml-2">
+                  {user.role_id > 2 && ideaData.idea.ambassador_validated_at ? (
+                    <li className="meta-list-item text-secondary text-white">
+                      Validée ambassadeur le{" "}
+                      {new Date(
+                        ideaData.idea.ambassador_validated_at
+                      ).toLocaleDateString("fr-FR", dateOptions)}
+                    </li>
+                  ) : (
+                    ""
+                  )}
+                </ul>
+                <ul className="meta-list font-weight-medium ml-2">
+                  <li className="meta-list-item text-secondary text-white">
+                    👁️‍🗨️ {ideaData.idea.views}
+                  </li>
+                  <li
+                    className="meta-list-item text-secondary separator"
+                    onMouseLeave={() => setNotesHover(0)}
+                    data-id="note"
+                  >
+                    <button
+                      type="button"
+                      onClick={handleNoteClick}
+                      className="btn btn-link"
+                      disabled={notesHover === 0}
+                    >
+                      <i
+                        data-id="1"
+                        onMouseEnter={setNoteHover}
+                        onMouseLeave={setNoteOut}
+                        className={`icons-bookmark icons-size-1x25 ${
+                          notesHover >= 1 ? "text-danger" : ""
+                        } ${
+                          ideaData.idea.final_note >= 1 && notesHover < 1
+                            ? "text-warning"
+                            : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <i
+                        data-id="2"
+                        onMouseEnter={setNoteHover}
+                        onMouseLeave={setNoteOut}
+                        className={`icons-bookmark icons-size-1x25 ${
+                          notesHover >= 2 ? "text-danger" : ""
+                        } ${
+                          ideaData.idea.final_note >= 2 && notesHover < 2
+                            ? "text-warning"
+                            : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <i
+                        data-id="3"
+                        onMouseEnter={setNoteHover}
+                        onMouseLeave={setNoteOut}
+                        className={`icons-bookmark icons-size-1x25 ${
+                          notesHover >= 3 ? "text-danger" : ""
+                        } ${
+                          ideaData.idea.final_note >= 3 && notesHover < 3
+                            ? "text-warning"
+                            : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <i
+                        data-id="4"
+                        onMouseEnter={setNoteHover}
+                        onMouseLeave={setNoteOut}
+                        className={`icons-bookmark icons-size-1x25 ${
+                          notesHover >= 4 ? "text-danger" : ""
+                        } ${
+                          ideaData.idea.final_note >= 4 && notesHover < 4
+                            ? "text-warning"
+                            : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <i
+                        data-id="5"
+                        onMouseEnter={setNoteHover}
+                        onMouseLeave={setNoteOut}
+                        className={`icons-bookmark icons-size-1x25 ${
+                          notesHover >= 5 ? "text-danger" : ""
+                        } ${
+                          ideaData.idea.final_note >= 5 && notesHover < 5
+                            ? "text-warning"
+                            : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </li>
+                </ul>
+                <ul className="meta-list font-weight-medium ml-2 mb-0">
+                  <li className="meta-list-item text-secondary text-white">
+                    <p>{ideaData.idea.description}</p>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="">
+            <nav role="navigation" aria-label="Status : ">
+              <ol className="breadcrumb rounded-bottom px-2 border-right border-left border-bottom">
+                <li
+                  className={`breadcrumb-item ${
+                    ideaData.idea.status === 1 ? "active" : ""
                   }`}
-                  aria-hidden="true"
-                />
-                <i
-                  data-id="2"
-                  onMouseEnter={setNoteHover}
-                  onMouseLeave={setNoteOut}
-                  className={`icons-bookmark icons-size-1x25 ${
-                    notesHover >= 2 ? "text-danger" : ""
-                  } ${
-                    displayShow.idea.final_note >= 2 && notesHover < 2
-                      ? "text-warning"
-                      : ""
-                  }`}
-                  aria-hidden="true"
-                />
-                <i
-                  data-id="3"
-                  onMouseEnter={setNoteHover}
-                  onMouseLeave={setNoteOut}
-                  className={`icons-bookmark icons-size-1x25 ${
-                    notesHover >= 3 ? "text-danger" : ""
-                  } ${
-                    displayShow.idea.final_note >= 3 && notesHover < 3
-                      ? "text-warning"
-                      : ""
-                  }`}
-                  aria-hidden="true"
-                />
-                <i
-                  data-id="4"
-                  onMouseEnter={setNoteHover}
-                  onMouseLeave={setNoteOut}
-                  className={`icons-bookmark icons-size-1x25 ${
-                    notesHover >= 4 ? "text-danger" : ""
-                  } ${
-                    displayShow.idea.final_note >= 4 && notesHover < 4
-                      ? "text-warning"
-                      : ""
-                  }`}
-                  aria-hidden="true"
-                />
-                <i
-                  data-id="5"
-                  onMouseEnter={setNoteHover}
-                  onMouseLeave={setNoteOut}
-                  className={`icons-bookmark icons-size-1x25 ${
-                    notesHover >= 5 ? "text-danger" : ""
-                  } ${
-                    displayShow.idea.final_note >= 5 && notesHover < 5
-                      ? "text-warning"
-                      : ""
-                  }`}
-                  aria-hidden="true"
-                />
-              </button>
-            </li>
-          </ul>
-          <ul className="meta-list font-weight-medium ml-2">
-            <li className="meta-list-item text-secondary">
-              <p>{displayShow.idea.description}</p>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div className="">
-        <nav role="navigation" aria-label="Status : ">
-          <ol className="breadcrumb rounded-bottom px-2 border-right border-left border-bottom">
-            <li
-              className={`breadcrumb-item ${
-                displayShow.idea.status === 0 ? "active" : ""
-              }`}
-              aria-current={displayShow.idea.status === 0 ? "step" : ""}
-            >
-              <button
-                type="button"
-                tabIndex="0"
-                className={`btn btn-link text-${
-                  displayShow.idea.status === 0 ? "warning" : "link"
-                }`}
-                data-toggle="popover"
-                data-trigger="focus"
-                title="En cours de rédaction"
-                data-content="Rédaction et relecture de l'idée, n'oubliez pas d'habiller votre innovation d'une image de couverture, et de l'accompagner de tous les documents qui peuvent s'avérer utiles !"
-              >
-                {detailedStatus[0]}
-              </button>
-              {displayShow.idea.status === 0 ? (
-                <span className="sr-only">actif</span>
-              ) : (
-                ""
-              )}
-            </li>
-            <li
-              className={`breadcrumb-item ${
-                displayShow.idea.status === 1 ? "active" : ""
-              }`}
-              aria-current={displayShow.idea.status === 1 ? "step" : ""}
-            >
-              <button
-                type="button"
-                tabIndex="0"
-                className={`btn btn-link text-${
-                  displayShow.idea.status === 1 ? "warning" : "link"
-                }`}
-                data-toggle="popover"
-                data-trigger="focus"
-                title="En attente de validation manager"
-                data-content="Votre manager doit valider la poursuite de votre innovation vers l'infinie et au delà..."
-              >
-                {detailedStatus[1]}
-              </button>
-              {displayShow.idea.status === 1 ? (
-                <span className="sr-only">actif</span>
-              ) : (
-                ""
-              )}
-            </li>
-            <li
-              className={`breadcrumb-item ${
-                displayShow.idea.status === 2 ? "active" : ""
-              }`}
-              aria-current={displayShow.idea.status === 2 ? "step" : ""}
-            >
-              <button
-                type="button"
-                tabIndex="0"
-                className={`btn btn-link text-${
-                  displayShow.idea.status === 2 ? "warning" : "link"
-                }`}
-                data-toggle="popover"
-                data-trigger="focus"
-                title="En attente de validation ambassadeur"
-                data-content="Cette étape nécessite le rassemblement de la commission innovation de votre établissement ce qui se produit une fois par trimestre."
-              >
-                {detailedStatus[2]}
-              </button>
-              {displayShow.idea.status === 2 ? (
-                <span className="sr-only">actif</span>
-              ) : (
-                ""
-              )}
-            </li>
-            <li
-              className={`breadcrumb-item ${
-                displayShow.idea.status > 2 ? "active" : ""
-              }`}
-              aria-current={displayShow.idea.status > 2 ? "step" : ""}
-            >
-              {displayShow.idea.status < 2 ? (
-                <>
+                  aria-current={ideaData.idea.status === 1 ? "step" : ""}
+                >
                   <button
                     type="button"
                     tabIndex="0"
-                    className="btn btn-link"
+                    className={`btn btn-link text-${
+                      ideaData.idea.status === 1 ? "danger" : "link"
+                    }`}
                     data-toggle="popover"
-                    data-trigger="focus"
-                    title="Validée et mise en application"
-                    data-content="Une innovation validée a été approuvée par votre établissement pour sa mise en application ! Elle peut également avoir été primée."
+                    data-trigger="hover"
+                    title={`En attente de validation manager${
+                      ideaData.idea.status === 1 ? " (état actuel)" : ""
+                    }`}
+                    data-content="Votre manager doit valider la poursuite de votre innovation vers l'infinie et au delà..."
                   >
-                    {detailedStatus[3]}
+                    {detailedStatus[1]}
                   </button>
-                  &nbsp;/&nbsp;
+                  {ideaData.idea.status === 1 ? (
+                    <span className="sr-only">actif</span>
+                  ) : (
+                    ""
+                  )}
+                </li>
+                <li
+                  className={`breadcrumb-item ${
+                    ideaData.idea.status === 2 ? "active" : ""
+                  }`}
+                  aria-current={ideaData.idea.status === 2 ? "step" : ""}
+                >
                   <button
                     type="button"
                     tabIndex="0"
-                    className="btn btn-link"
+                    className={`btn btn-link text-${
+                      ideaData.idea.status === 2 ? "danger" : "link"
+                    }`}
                     data-toggle="popover"
-                    data-trigger="focus"
-                    title="Refusée ou nécessite un approfondissement"
-                    data-content="Une idée peut avoir été refusée car elle nécessiterait un approfondissement de votre part, ou une expertise d'un tiers."
+                    data-trigger="hover"
+                    title={`Attente de validation ambassadeur${
+                      ideaData.idea.status === 2 ? " (état actuel)" : ""
+                    }`}
+                    data-content="Cette étape nécessite le rassemblement de la commission innovation de votre établissement ce qui se produit une fois par trimestre en fonction des établissements."
                   >
-                    {detailedStatus[4]}
+                    {detailedStatus[2]}
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  tabIndex="0"
-                  className={`btn btn-link text-${
-                    displayShow.idea.status === 3
-                      ? "warning"
-                      : `${displayShow.idea.status === 4 ? "danger" : "link"}`
+                  {ideaData.idea.status === 2 ? (
+                    <span className="sr-only">actif</span>
+                  ) : (
+                    ""
+                  )}
+                </li>
+                <li
+                  className={`breadcrumb-item ${
+                    ideaData.idea.status > 2 ? "active" : ""
                   }`}
-                  data-toggle="popover"
-                  data-trigger="focus"
-                  title={
-                    displayShow.idea.status === 3
-                      ? "Validée et mise en application (état actuel)"
-                      : "Refusée ou nécessite un approfondissement (état actuel)"
+                  aria-current={ideaData.idea.status > 2 ? "step" : ""}
+                >
+                  {ideaData.idea.status <= 2 ? (
+                    <>
+                      <button
+                        type="button"
+                        tabIndex="0"
+                        className="btn btn-link"
+                        data-toggle="popover"
+                        data-trigger="hover"
+                        title={`Validée et mise en application${
+                          ideaData.idea.status === 3 ? " (état actuel)" : ""
+                        }`}
+                        data-content="Une innovation validée a été approuvée par votre établissement pour sa mise en application ! Elle peut également avoir été primée."
+                      >
+                        {detailedStatus[3]}
+                      </button>
+                      &nbsp;/&nbsp;
+                      <button
+                        type="button"
+                        tabIndex="0"
+                        className="btn btn-link"
+                        data-toggle="popover"
+                        data-trigger="hover"
+                        title="Nécessite un approfondissement"
+                        data-content="Une idée peut avoir nécessiter un approfondissement de votre part, ou une expertise d'un tiers (voir le commentaire de la demande d'approfondissement)."
+                      >
+                        {detailedStatus[4]}
+                      </button>
+                      &nbsp;/&nbsp;
+                      <button
+                        type="button"
+                        tabIndex="0"
+                        className="btn btn-link"
+                        data-toggle="popover"
+                        data-trigger="hover"
+                        title="Refusée:"
+                        data-content="Une idée peut peut être refusée si elle manque de consistance, qu'elle n'est pas pertinente, ou bien qu'une autre innovation a déjà solutionné cette problématique."
+                      >
+                        {detailedStatus[5]}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      tabIndex="0"
+                      className={`btn btn-link text-${
+                        ideaData.idea.status === 3 ||
+                        ideaData.idea.status === 4 ||
+                        ideaData.idea.status === 5
+                          ? "danger"
+                          : "link"
+                      }`}
+                      data-toggle="popover"
+                      data-trigger="hover"
+                      title={`${
+                        ideaData.idea.status === 3
+                          ? "Validée et mise en application (état actuel)"
+                          : ""
+                      }
+                      ${
+                        ideaData.idea.status === 4
+                          ? "Nécessite un approfondissement (état actuel)"
+                          : ""
+                      }
+                      ${
+                        ideaData.idea.status === 5
+                          ? "Refusée (état actuel)"
+                          : ""
+                      }`}
+                      data-content={`${
+                        ideaData.idea.status === 3
+                          ? "Une innovation validée a été approuvée par votre établissement pour sa mise en application ! Elle peut également avoir été primée."
+                          : ""
+                      }
+                      ${
+                        ideaData.idea.status === 4
+                          ? "Une idée peut avoir nécessiter un approfondissement de votre part, ou une expertise d'un tiers (voir le commentaire de la demande d'approfondissement)."
+                          : ""
+                      }
+                      ${
+                        ideaData.idea.status === 5
+                          ? "Cette idée a été refusée (voir le commentaire du refus)."
+                          : ""
+                      }`}
+                    >
+                      {detailedStatus[ideaData.idea.status]}
+                    </button>
+                  )}
+                </li>
+              </ol>
+            </nav>
+          </div>
+          <div className="col mt-2 px-0">
+            <h1 className="p-3">
+              {`Catégorie${
+                ideaData.idea.categories.length ? "s" : ""
+              } associées`}
+            </h1>
+            <div className="card overflow-hidden">
+              <Selector
+                label=""
+                className={`${
+                  darkMode < 2 ? "bg-light" : "bg-gray-dark"
+                } rounded p-3 m-0`}
+                id="subscribed_categories"
+                values={categories.map((categorie) => {
+                  return {
+                    id: categorie.id_categorie,
+                    name: categorie.name,
+                    id_parent: categorie.id_parent_categorie,
+                  };
+                })}
+                onlySelected
+                onChange={() => {
+                  return false;
+                }}
+                selectedValues={ideaData.idea.categories}
+                errorMessages={[]}
+              />
+            </div>
+          </div>
+          <div className="col mt-2 px-0">
+            <h1 className="p-3">Description de la problèmatique</h1>
+            <div className="card overflow-hidden">
+              <div
+                className={`card-body p-2 p-sm-3 ${
+                  darkMode === 2 ? "bg-gray" : "bg-light"
+                } p-0`}
+              >
+                <div
+                  className="ck-content"
+                  dangerouslySetInnerHTML={{
+                    __html: ideaData.idea.problem.replaceAll(
+                      "<img src=",
+                      '<img class="rounded" style="cursor: zoom-in;" data-toggle="modal" data-target=".bd-example-modal-lg" onClick="document.getElementById(\'modalImage\').src=this.src; document.getElementById(\'modalImage\').srcset=this.srcset;" src='
+                    ),
+                  }}
+                />
+              </div>
+              <Comments
+                id="comments_problem"
+                label={
+                  !commentsLoaded[1]
+                    ? "Dernières contributions:"
+                    : "Contributions:"
+                }
+                field={1}
+                ideaData={ideaData}
+                setIdeaData={setIdeaData}
+                commentsLoaded={commentsLoaded}
+                setCommentsLoaded={setCommentsLoaded}
+                handleSubmit={handleSubmitComment}
+              />
+              <FilesAndUploads
+                field={1}
+                idIdeaAuthor={
+                  ideaData.authors.find((autor) => autor.is_author).id_user
+                }
+                ideaAssets={ideaData.assets}
+                setIdeaAssets={(assets) => setIdeaData({ ...ideaData, assets })}
+                idea={ideaData.idea}
+                imageModalRef={imageModalRef}
+              />
+            </div>
+          </div>
+          <div className="col mt-2 px-0">
+            <h1 className="p-3">Solution proposée</h1>
+            <div className="card overflow-hidden">
+              <div
+                className={`card-body p-2 p-sm-3 ${
+                  darkMode === 2 ? "bg-gray" : "bg-light"
+                } p-0`}
+              >
+                <div
+                  className="ck-content"
+                  dangerouslySetInnerHTML={{
+                    __html: ideaData.idea.solution.replaceAll(
+                      "<img",
+                      '<img class="rounded" style="cursor: zoom-in;" data-toggle="modal" data-target=".bd-example-modal-lg" onClick="document.getElementById(\'modalImage\').src=this.src; document.getElementById(\'modalImage\').srcset=this.srcset;"'
+                    ),
+                  }}
+                />
+              </div>
+              <Comments
+                id="comments_solution"
+                label={
+                  !commentsLoaded[2]
+                    ? "Dernières contributions:"
+                    : "Contributions:"
+                }
+                field={2}
+                ideaData={ideaData}
+                setIdeaData={setIdeaData}
+                commentsLoaded={commentsLoaded}
+                setCommentsLoaded={setCommentsLoaded}
+                handleSubmit={handleSubmitComment}
+              />
+              <FilesAndUploads
+                field={2}
+                idIdeaAuthor={
+                  ideaData.authors.find((autor) => autor.is_author).id_user
+                }
+                ideaAssets={ideaData.assets}
+                setIdeaAssets={(assets) => setIdeaData({ ...ideaData, assets })}
+                idea={ideaData.idea}
+                imageModalRef={imageModalRef}
+              />
+            </div>
+          </div>
+          <div className="col mt-2 pb-5 px-0">
+            <h1 className="p-3">Gains attendus et/ou constatés</h1>
+            <div className="card overflow-hidden">
+              <div
+                className={`card-body p-2 p-sm-3 ${
+                  darkMode === 2 ? "bg-gray" : "bg-light"
+                } p-0`}
+              >
+                <div
+                  className="ck-content"
+                  dangerouslySetInnerHTML={{
+                    __html: ideaData.idea.gains.replaceAll(
+                      "<img",
+                      '<img class="rounded" style="cursor: zoom-in;" data-toggle="modal" data-target=".bd-example-modal-lg" onClick="document.getElementById(\'modalImage\').src=this.src; document.getElementById(\'modalImage\').srcset=this.srcset;"'
+                    ),
+                  }}
+                />
+                <FilesAndUploads
+                  field={3}
+                  idIdeaAuthor={
+                    ideaData.authors.find((autor) => autor.is_author).id_user
                   }
-                  data-content={
-                    displayShow.idea.status === 3
-                      ? "Une innovation validée a été approuvée par votre établissement pour sa mise en application ! Elle peut également avoir été primée."
-                      : "Une idée peut avoir été refusée car elle nécessiterait un approfondissement de votre part, ou une expertise d'un tiers."
+                  ideaAssets={ideaData.assets}
+                  setIdeaAssets={(assets) =>
+                    setIdeaData({ ...ideaData, assets })
+                  }
+                  idea={ideaData.idea}
+                  imageModalRef={imageModalRef}
+                />
+              </div>
+              <Comments
+                id="comments_gains"
+                label={
+                  !commentsLoaded[3]
+                    ? "Dernières contributions:"
+                    : "Contributions:"
+                }
+                field={3}
+                ideaData={ideaData}
+                setIdeaData={setIdeaData}
+                commentsLoaded={commentsLoaded}
+                setCommentsLoaded={setCommentsLoaded}
+                handleSubmit={handleSubmitComment}
+              />
+            </div>
+          </div>
+          {ideaData.comments[0].comments.length > 0 ? (
+            <div className="col mt-2 pb-5 px-0">
+              <h1 className="p-3">Parcours de l'innovation</h1>
+              <div className="card overflow-hidden">
+                <Comments
+                  id="comments_innov"
+                  label=""
+                  field={0}
+                  ideaData={ideaData}
+                  setIdeaData={setIdeaData}
+                  commentsLoaded={commentsLoaded}
+                  setCommentsLoaded={setCommentsLoaded}
+                  handleSubmit={handleSubmitComment}
+                />
+              </div>
+            </div>
+          ) : (
+            ""
+          )}
+
+          <div
+            className="modal fade bd-example-modal-lg"
+            tabIndex="-1"
+            role="dialog"
+            aria-hidden="true"
+          >
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div
+                className="modal-content text-center"
+                style={{ background: "transparent" }}
+              >
+                <img
+                  ref={imageModalRef}
+                  id="modalImage"
+                  src=""
+                  alt={`Visuel lié à l'innovation ${ideaData.idea.name}`}
+                  className="rounded my-auto mx-auto img-fluid"
+                />
+                <button
+                  className="btn btn-warning rounded p-2 position-absolute"
+                  style={{ top: 15, right: 15 }}
+                  type="button"
+                  onClick={() =>
+                    window.open(imageModalRef.current.src, "_blank").focus()
                   }
                 >
-                  {detailedStatus[displayShow.idea.status]}
+                  <i
+                    className="icons-external-link icons-size-25px"
+                    aria-hidden="true"
+                  />
                 </button>
-              )}
-            </li>
-          </ol>
-          <CategorieSelector
-            label={`Catégorie${
-              displayShow.idea.categories.length ? "s" : ""
-            } associées`}
-            className={`${
-              darkMode < 2 ? "bg-light" : "bg-gray-dark"
-            } rounded p-3 my-2`}
-            labelClassName="p-3"
-            values={displayShow.idea.categories}
-            selected={displayShow.idea.categories}
-          />
-        </nav>
-      </div>
-      <div className="col mt-2 px-0">
-        <h1 className="p-3">Description de la problèmatique</h1>
-        <div className="card overflow-hidden">
-          <div
-            className={`card-body p-2 p-sm-3 ${
-              darkMode === 2 ? "bg-gray" : "bg-light"
-            } p-0`}
-          >
-            <div
-              className="ck-content"
-              dangerouslySetInnerHTML={{
-                __html: displayShow.idea.problem.replaceAll(
-                  "<img src=",
-                  '<img class="rounded" style="cursor: zoom-in;" data-toggle="modal" data-target=".bd-example-modal-lg" onClick="document.getElementById(\'modalImage\').src=this.src; document.getElementById(\'modalImage\').srcset=this.srcset;" src='
-                ),
-              }}
-            />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="col mt-2 px-0">
-        <h1 className="p-3">Solution proposée</h1>
-        <div className="card overflow-hidden">
-          <div
-            className={`card-body p-2 p-sm-3 ${
-              darkMode === 2 ? "bg-gray" : "bg-light"
-            } p-0`}
-          >
-            <div
-              className="ck-content"
-              dangerouslySetInnerHTML={{
-                __html: displayShow.idea.solution.replaceAll(
-                  "<img",
-                  '<img class="rounded" style="cursor: zoom-in;" data-toggle="modal" data-target=".bd-example-modal-lg" onClick="document.getElementById(\'modalImage\').src=this.src; document.getElementById(\'modalImage\').srcset=this.srcset;"'
-                ),
-              }}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="col mt-2 pb-5 px-0">
-        <h1 className="p-3">Gains attendus et/ou constatés</h1>
-        <div className="card overflow-hidden">
-          <div
-            className={`card-body p-2 p-sm-3 ${
-              darkMode === 2 ? "bg-gray" : "bg-light"
-            } p-0`}
-          >
-            <div
-              className="ck-content"
-              dangerouslySetInnerHTML={{
-                __html: displayShow.idea.gains.replaceAll(
-                  "<img",
-                  '<img class="rounded" style="cursor: zoom-in;" data-toggle="modal" data-target=".bd-example-modal-lg" onClick="document.getElementById(\'modalImage\').src=this.src; document.getElementById(\'modalImage\').srcset=this.srcset;"'
-                ),
-              }}
-            />
-          </div>
-        </div>
-      </div>
-      <div
-        className="modal fade bd-example-modal-lg"
-        tabIndex="-1"
-        role="dialog"
-        aria-labelledby="myLargeModalLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog modal-lg modal-dialog-centered">
-          <div
-            className="modal-content text-center"
-            style={{ background: "transparent" }}
-          >
-            <img
-              ref={imageModalRef}
-              id="modalImage"
-              src=""
-              alt={`Visuel lié à l'innovation ${displayShow.idea.name}`}
-              className="rounded my-auto mx-auto img-fluid"
-            />
-            <button
-              className="btn btn-warning rounded p-2 position-absolute"
-              style={{ top: 15, right: 15 }}
-              type="button"
-              onClick={() =>
-                window.open(imageModalRef.current.src, "_blank").focus()
-              }
-            >
-              <i
-                className="icons-external-link icons-size-25px"
+          {id && (perms.isAdmin || perms.isAmbassador || perms.isManager) ? (
+            <div className="my-0 mx-0 w-100 d-flex justify-content-center align-items-center flex-column">
+              <div className="my-0 mx-0 w-100 d-flex justify-content-center align-items-center flex-column flex-md-row">
+                {(ideaData.idea.status > 0 && ideaData.idea.status < 3) ||
+                ideaData.idea.status === 5 ? (
+                  <div
+                    className={`m-0 validate-buttons-area ${
+                      ideaData.idea.status === 5 ? "" : "mr-md-5"
+                    } d-flex justify-content-center justify-content-md-end align-items-center flex-row`}
+                  >
+                    <button
+                      data-toggle="modal"
+                      data-target="#actionModal"
+                      data-action="deepen"
+                      type="button"
+                      style={{ width: "218px" }}
+                      className="btn btn-info m-2 text-center"
+                      onClick={handleActionSelect}
+                    >
+                      Demande
+                      <br />
+                      d'approfondissement
+                    </button>
+                  </div>
+                ) : (
+                  ""
+                )}
+                <div className="m-0 d-flex validate-buttons-area justify-content-center justify-content-md-start align-items-center flex-row">
+                  {ideaData.idea.status === 1 &&
+                  (perms.isManager || perms.isAdmin) ? (
+                    <button
+                      data-toggle="modal"
+                      data-target="#actionModal"
+                      data-action="validateManager"
+                      type="button"
+                      style={{ width: "170px" }}
+                      className="btn btn-success m-2 text-center"
+                      onClick={handleActionSelect}
+                    >
+                      Validation
+                      <br />
+                      manager
+                    </button>
+                  ) : (
+                    ""
+                  )}
+                  {ideaData.idea.status === 2 &&
+                  (perms.isAmbassador || perms.isAdmin) ? (
+                    <button
+                      data-toggle="modal"
+                      data-target="#actionModal"
+                      data-action="validateAmbassador"
+                      type="button"
+                      style={{ width: "170px" }}
+                      className="btn btn-success m-2 text-center"
+                      onClick={handleActionSelect}
+                    >
+                      Validation
+                      <br />
+                      ambassadeur
+                    </button>
+                  ) : (
+                    ""
+                  )}
+                </div>
+              </div>
+              <div
+                className={`m-0 w-100 d-flex flex-column flex-md-row ${
+                  ideaData.idea.status === 5
+                    ? "justify-content-start"
+                    : "justify-content-center justify-content-md-end"
+                }`}
+              >
+                {ideaData.idea.status > 0 && ideaData.idea.status < 5 ? (
+                  <div
+                    className={`m-0 ${
+                      ideaData.idea.status === 5 ? "" : "mr-md-5"
+                    } d-flex validate-buttons-area justify-content-center justify-content-md-end align-items-center flex-row`}
+                  >
+                    <button
+                      data-toggle="modal"
+                      data-target="#actionModal"
+                      data-action="reject"
+                      type="button"
+                      className="btn btn-warning m-2 text-center reject-button"
+                      onClick={handleActionSelect}
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                ) : (
+                  ""
+                )}
+                {perms.isAmbassador || perms.isAdmin ? (
+                  <div
+                    className={`m-0 d-flex align-items-center flex-row validate-buttons-area ${
+                      ideaData.idea.status === 5
+                        ? "justify-content-center justify-content-md-end "
+                        : "justify-content-center justify-content-md-start"
+                    }`}
+                  >
+                    <button
+                      data-toggle="modal"
+                      data-target="#actionModal"
+                      data-action="delete"
+                      type="button"
+                      style={{
+                        width: ideaData.idea.status === 5 ? "218px" : "170px",
+                      }}
+                      className="btn btn-danger m-2 text-center"
+                      onClick={handleActionSelect}
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                ) : (
+                  ""
+                )}
+              </div>
+              <div
+                className="modal fade"
+                id="actionModal"
+                tabIndex="-1"
+                role="dialog"
+                aria-labelledby="actionModalLabel"
                 aria-hidden="true"
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+              >
+                <div
+                  className="modal-dialog modal-dialog-centered"
+                  role="document"
+                >
+                  <div className="modal-content">
+                    <div className="modal-header">
+                      <h5 className="h1 modal-title" id="actionModalLabel">
+                        {modalAction.title}
+                      </h5>
+                      <button
+                        type="button"
+                        className="close"
+                        data-dismiss="modal"
+                        aria-label="Annuler"
+                      >
+                        <span aria-hidden="true">&times;</span>
+                      </button>
+                    </div>
+                    {modalAction.targetStatus ? (
+                      <div className="modal-body">
+                        <ManagerCommentForm
+                          id="action"
+                          ideaData={ideaData}
+                          setIdeaData={setIdeaData}
+                          field={0}
+                          textButton={modalAction.buttonText}
+                          classNameButton={modalAction.buttonClass}
+                          setValue={setManagerComment}
+                          value={managerComment}
+                          errorMessages={managerCommentErrors}
+                        />
+                      </div>
+                    ) : (
+                      ""
+                    )}
+                    <div
+                      className="modal-body"
+                      dangerouslySetInnerHTML={{ __html: modalAction.message }}
+                    />
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setModalAction({})}
+                        data-dismiss="modal"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAction}
+                        className={`btn ${modalAction.buttonClass}`}
+                        data-dismiss="modal"
+                      >
+                        {modalAction.buttonText}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            ""
+          )}
+        </main>
+      );
+  }
 }

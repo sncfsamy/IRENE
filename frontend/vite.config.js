@@ -4,8 +4,12 @@ import react from "@vitejs/plugin-react";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // base: "/irene_bis",
   assetsInclude: ["**/*.heif"],
+  plugins: [react()],
+  // server: {
+  //   origin: 'http://irene.sncf.fr:5173',
+  // },
   resolve: {
     alias: {
       "@assets": path.resolve(__dirname, "src/assets"),

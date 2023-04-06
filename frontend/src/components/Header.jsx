@@ -1,23 +1,22 @@
 import { useState, useContext, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import PropTypes from "prop-types";
+import logoSncfWhite from "@assets/LOGO_SNCF_GROUPE_NOIR_small.heif";
+import logoSncf from "@assets/LOGO_SNCF_GROUPE_RVB_small.heif";
+import logoSncfDark from "@assets/LOGO_SNCF_GROUPE_DEFONCE_small.heif";
+import logoIrene from "@assets/logo.heif";
+import logoIreneDark from "@assets/logo_dark.heif";
 import SharedContext from "../contexts/sharedContext";
-import logo_sncf_irene from "../assets/LOGO_SNCF_GROUPE_NOIR_small.png";
-import logo_sncf_sncf from "../assets/LOGO_SNCF_GROUPE_RVB_small.png";
-import logo_sncf_dark from "../assets/LOGO_SNCF_GROUPE_DEFONCE_small.png";
-import logo from "../assets/logo.png";
-import logo_dark from "../assets/logo_dark.png";
 
-export default function Header({ setToken, setDarkMode, setUser }) {
+export default function Header({ setDarkMode, setUser }) {
   const handleClick = (e) => {
-    const sideMenu = document.querySelector(".Side-menu");
     e.preventDefault();
-    sideMenu.classList.toggle("ml-0");
+    document.querySelector(".menu").classList.toggle("showed");
   };
-  const [homeIsHovering, setHomeIsHovering] = useState(false);
-  const [skillsIsHovering, setSkillsIsHovering] = useState(false);
-  const [innovationIsHovering, setInnovationIsHovering] = useState(false);
-  const [ideaIsHovering, setIdeaIsHovering] = useState(false);
-  const { darkMode } = useContext(SharedContext);
+  const [menuHover, setMenuHover] = useState(0);
+  const { darkMode, user, customFetch, setIsLoading, setIsLogged } =
+    useContext(SharedContext);
+  const location = useLocation();
 
   let buttonsColor = darkMode === 0 ? "bg-cyan" : "bg-secondary";
   buttonsColor = darkMode === 1 ? "bg-light" : buttonsColor;
@@ -25,17 +24,54 @@ export default function Header({ setToken, setDarkMode, setUser }) {
   hoverButtonColor = darkMode === 1 ? "bg-cyan" : hoverButtonColor;
 
   const disconnect = () => {
-    localStorage.removeItem("IRENE_AUTH");
-    setUser();
-    setToken();
+    customFetch(`${import.meta.env.VITE_BACKEND_URL}/logout`, "POST").finally(
+      () => {
+        setUser();
+        setIsLogged(false);
+      }
+    );
   };
-
+  const handleLinkClick = (e) => {
+    const href =
+      e.target.parentElement.href ?? e.target.parentElement.parentElement.href;
+    $(".modal").modal("hide");
+    if (!href.includes(location.pathname)) {
+      setIsLoading(true);
+    }
+  };
   let backgroundColor = "bg-light";
   if (darkMode > 0) {
     backgroundColor = "bg-primary";
   }
+  const havePerms = () => {
+    return (
+      user.perms.manage_ideas_manager ||
+      user.perms.manage_ideas_ambassador ||
+      user.perms.manage_ideas_all ||
+      user.perms.manage_challenges ||
+      user.perms.manage_challenges_all ||
+      user.perms.manage_organisations ||
+      user.perms.manage_teams ||
+      user.perms.manage_roles ||
+      user.perms.manage_categories ||
+      user.perms.manage_all
+    );
+  };
+  const click = (e) => {
+    const menu = document.querySelector(".menu");
+    if (
+      menu.classList.contains("showed") &&
+      !e.target.classList.contains("icons-menu-burger")
+    ) {
+      menu.classList.toggle("showed");
+    }
+  };
+  useEffect(() => {
+    window.addEventListener("click", click);
+    return () => window.removeEventListener("click", click);
+  }, []);
   return (
-    <div className="sticky-top d-flex flex-column">
+    <div className="sticky-top d-flex flex-column" style={{ zIndex: "1070" }}>
       <div
         className={`p-2 ${backgroundColor} text-black d-flex justify-content-between align-items-center`}
         style={{ height: "62px", top: 0, left: 0 }}
@@ -49,71 +85,90 @@ export default function Header({ setToken, setDarkMode, setUser }) {
             {" "}
           </i>
         </div>
-        <h1 className="m-2 font-weight-bold d-flex w-auto flex-row justify-content-arround align-items-center pl-sm-5">
-          <img
-            src={darkMode === 0 ? logo_dark : logo}
-            height="60px"
-            alt="IRENE"
-            className="ml-sm-5 pl-sm-5 ml-md-0 pl-md-0 pr-3"
-          />
-          IRENE
-          {darkMode === 0 ? (
+        <h1 className="m-2 ml-md-5 font-weight-bold d-flex w-auto flex-row justify-content-arround align-items-center pl-sm-5">
+          <Link
+            to={`${import.meta.env.VITE_FRONTEND_URI}/`}
+            onClick={handleLinkClick}
+            className="btn-unstyled"
+          >
             <img
-              src={logo_sncf_irene}
-              height="90px"
-              className="pl-3"
-              alt="Logo SNCF"
+              src={darkMode === 0 ? logoIreneDark : logoIrene}
+              height="60px"
+              alt="IRENE"
+              className="ml-sm-5 pl-sm-5 ml-md-0 pl-md-0 pr-3"
             />
-          ) : (
-            ""
-          )}
-          {darkMode === 1 ? (
-            <img
-              src={logo_sncf_sncf}
-              height="90px"
-              className="pl-3"
-              alt="Logo SNCF"
-            />
-          ) : (
-            ""
-          )}
-          {darkMode === 2 ? (
-            <img
-              src={logo_sncf_dark}
-              height="90px"
-              className="pl-3"
-              alt="Logo SNCF"
-            />
-          ) : (
-            ""
-          )}
+            <span className="d-none d-md-inline">IRENE</span>
+          </Link>
+          <a className="d-none d-md-inline" href="https://www.sncf.com">
+            {darkMode === 0 ? (
+              <img
+                src={logoSncfWhite}
+                height="90px"
+                className="pl-3"
+                alt="Logo SNCF"
+              />
+            ) : (
+              ""
+            )}
+            {darkMode === 1 ? (
+              <img
+                src={logoSncf}
+                height="90px"
+                className="pl-3"
+                alt="Logo SNCF"
+              />
+            ) : (
+              ""
+            )}
+            {darkMode === 2 ? (
+              <img
+                src={logoSncfDark}
+                height="90px"
+                className="pl-3"
+                alt="Logo SNCF"
+              />
+            ) : (
+              ""
+            )}
+          </a>
         </h1>
 
         <i
-          className="icons-menu-account icons-size-1x25 icons-md-size-1x5 mr-xl-2 text-gray-dark"
+          className="btn-rounded btn-rounded-gray text-gray-dark font-weight-bold style-none"
+          style={{ fontStyle: "normal", minHeight: "40px", minWidth: "40px" }}
           aria-hidden="true"
           type="button"
-          id="userMenu"
+          id="dropdownUserMenu"
           data-toggle="dropdown"
           aria-haspopup="true"
           aria-expanded="false"
           aria-controls="usercontrol"
         >
-          {" "}
+          {user.firstname[0]}
+          {user.lastname[0]}
         </i>
         <div
           className="dropdown-menu dropdown-menu-right mt-4"
           aria-labelledby="userMenu"
           id="usercontrol"
         >
+          <div className="text-right mx-3">
+            Connecté en tant que <br />
+            <span className="lead">
+              {user.firstname} {user.lastname}
+            </span>
+          </div>
           <ul>
-            <Link to="/user">
+            <Link
+              to={`${import.meta.env.VITE_FRONTEND_URI}/user`}
+              onClick={handleLinkClick}
+            >
               <li className="dropdown-item">Paramètre du compte</li>
             </Link>
-            <Link to="/documents">
+            <Link to={`${import.meta.env.VITE_FRONTEND_URI}/documents`}>
               <li className="dropdown-item">Documentation</li>
             </Link>
-            <Link to="/about">
+            <Link to={`${import.meta.env.VITE_FRONTEND_URI}/about`}>
               <li className="dropdown-item">A propos</li>
             </Link>
             <li className="dropdown-item mx-1">
@@ -182,30 +237,25 @@ export default function Header({ setToken, setDarkMode, setUser }) {
           </ul>
         </div>
       </div>
-      <div
-        className="Side-menu position-absolute text-white p-sm-0 p-2"
-        style={{
-          transition: "all linear .5s",
-          top: "61px",
-          backgroundColor: "rgba(0, 17, 43, 0.9)",
-          marginLeft: "-100%",
-        }}
-      >
+      <div className="menu position-absolute text-white p-sm-0 p-2">
         <nav>
-          <ul className="d-flex flex-column flex-sm-row p-1 m-0 w-auto meta-list">
-            <Link to="/">
+          <ul className="d-flex flex-column flex-sm-row p-10 m-0 w-auto meta-list">
+            <Link
+              to={`${import.meta.env.VITE_FRONTEND_URI}/`}
+              onClick={handleLinkClick}
+            >
               <li
-                onMouseEnter={() => setHomeIsHovering(true)}
-                onMouseLeave={() => setHomeIsHovering(false)}
+                onMouseEnter={() => setMenuHover(1)}
+                onMouseLeave={() => setMenuHover(0)}
                 className="pb-3 pb-sm-0"
               >
                 <i
                   className={`text-dark ${
-                    homeIsHovering ? hoverButtonColor : buttonsColor
+                    menuHover === 1 ? hoverButtonColor : buttonsColor
                   } irene-menu-icon btn-rounded icons-itinerary-train-station`}
                   style={{
                     transform:
-                      homeIsHovering && window.innerWidth >= 575
+                      menuHover === 1 && window.innerWidth >= 575
                         ? "translateY(24px)"
                         : "",
                   }}
@@ -214,7 +264,7 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </i>
                 <h1
                   className={`ml-3 d-inline d-sm-none w-100 h-100 lead font-weight-bolder text-nowrap text-monospace ${
-                    homeIsHovering ? "text-warning" : "text-white"
+                    menuHover === 1 ? "text-warning" : "text-white"
                   }`}
                   style={{
                     transition: "all ease-in-out .2s",
@@ -224,19 +274,22 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </h1>
               </li>
             </Link>
-            <Link to="/skills">
+            <Link
+              to={`${import.meta.env.VITE_FRONTEND_URI}/skills`}
+              onClick={handleLinkClick}
+            >
               <li
-                onMouseEnter={() => setSkillsIsHovering(true)}
-                onMouseLeave={() => setSkillsIsHovering(false)}
+                onMouseEnter={() => setMenuHover(2)}
+                onMouseLeave={() => setMenuHover(0)}
                 className="pb-3 pb-sm-0"
               >
                 <i
                   className={`text-dark ${
-                    skillsIsHovering ? hoverButtonColor : buttonsColor
-                  } irene-menu-icon Circle-icon btn-rounded icons-circle-account-connected`}
+                    menuHover === 2 ? hoverButtonColor : buttonsColor
+                  } irene-menu-icon btn-rounded icons-circle-account-connected`}
                   style={{
                     transform:
-                      skillsIsHovering && window.innerWidth >= 575
+                      menuHover === 2 && window.innerWidth >= 575
                         ? "translateY(24px)"
                         : "",
                   }}
@@ -245,7 +298,7 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </i>
                 <h1
                   className={`ml-3 d-inline d-sm-none w-100 h-100 lead font-weight-bolder text-nowrap text-monospace ${
-                    skillsIsHovering ? "text-warning" : "text-white"
+                    menuHover === 2 ? "text-warning" : "text-white"
                   }`}
                   style={{
                     transition: "all ease-in-out .2s",
@@ -255,20 +308,23 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </h1>
               </li>
             </Link>
-            <Link to="/search">
+            <Link
+              to={`${import.meta.env.VITE_FRONTEND_URI}/search`}
+              onClick={handleLinkClick}
+            >
               <li
-                onMouseEnter={() => setInnovationIsHovering(true)}
-                onMouseLeave={() => setInnovationIsHovering(false)}
+                onMouseEnter={() => setMenuHover(3)}
+                onMouseLeave={() => setMenuHover(0)}
                 className="pb-3 pb-sm-0"
               >
                 {" "}
                 <i
                   className={`text-dark ${
-                    innovationIsHovering ? hoverButtonColor : buttonsColor
-                  } irene-menu-icon Circle-icon btn-rounded icons-file`}
+                    menuHover === 3 ? hoverButtonColor : buttonsColor
+                  } irene-menu-icon btn-rounded icons-file`}
                   style={{
                     transform:
-                      innovationIsHovering && window.innerWidth >= 575
+                      menuHover === 3 && window.innerWidth >= 575
                         ? "translateY(24px)"
                         : "",
                   }}
@@ -277,7 +333,7 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </i>
                 <h1
                   className={`ml-3 d-inline d-sm-none w-100 h-100 lead font-weight-bolder text-nowrap text-monospace ${
-                    innovationIsHovering ? "text-warning" : "text-white"
+                    menuHover === 3 ? "text-warning" : "text-white"
                   }`}
                   style={{
                     transition: "all ease-in-out .2s",
@@ -287,20 +343,23 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </h1>
               </li>
             </Link>
-            <Link to="/edit">
+            <Link
+              to={`${import.meta.env.VITE_FRONTEND_URI}/edit`}
+              onClick={handleLinkClick}
+            >
               <li
-                onMouseEnter={() => setIdeaIsHovering(true)}
-                onMouseLeave={() => setIdeaIsHovering(false)}
-                className="pb-0"
+                onMouseEnter={() => setMenuHover(4)}
+                onMouseLeave={() => setMenuHover(0)}
+                className={`pb-${havePerms() ? "3" : "0"} pb-sm-0`}
               >
                 {" "}
                 <i
                   className={`text-dark ${
-                    ideaIsHovering ? hoverButtonColor : buttonsColor
+                    menuHover === 4 ? hoverButtonColor : buttonsColor
                   } irene-menu-icon menu-icon btn-rounded icons-large-lightbulb`}
                   style={{
                     transform:
-                      ideaIsHovering && window.innerWidth >= 575
+                      menuHover === 4 && window.innerWidth >= 575
                         ? "translateY(24px)"
                         : "",
                   }}
@@ -309,7 +368,7 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </i>
                 <h1
                   className={`ml-3 d-inline d-sm-none w-100 h-100 lead font-weight-bolder text-nowrap text-monospace ${
-                    ideaIsHovering ? "text-warning" : "text-white"
+                    menuHover === 4 ? "text-warning" : "text-white"
                   }`}
                   style={{
                     transition: "all ease-in-out .2s",
@@ -319,36 +378,77 @@ export default function Header({ setToken, setDarkMode, setUser }) {
                 </h1>
               </li>
             </Link>
+            {havePerms() ? (
+              <Link
+                to={`${import.meta.env.VITE_FRONTEND_URI}/manage`}
+                onClick={handleLinkClick}
+              >
+                <li
+                  onMouseEnter={() => setMenuHover(5)}
+                  onMouseLeave={() => setMenuHover(0)}
+                  className="pb-0"
+                >
+                  {" "}
+                  <i
+                    className={`text-dark ${
+                      menuHover === 5 ? "bg-danger" : buttonsColor
+                    } irene-menu-icon menu-icon btn-rounded icons-admin`}
+                    style={{
+                      transform:
+                        menuHover === 5 && window.innerWidth >= 575
+                          ? "translateY(24px)"
+                          : "",
+                    }}
+                  >
+                    {" "}
+                  </i>
+                  <h1
+                    className={`ml-3 d-inline d-sm-none w-100 h-100 lead font-weight-bolder text-nowrap text-monospace ${
+                      menuHover === 5 ? "text-warning" : "text-white"
+                    }`}
+                    style={{
+                      transition: "all ease-in-out .2s",
+                    }}
+                  >
+                    Mon espace de gestion
+                  </h1>
+                </li>
+              </Link>
+            ) : (
+              ""
+            )}
           </ul>
           {window.innerWidth >= 575 && (
             <div
-              className={`text-dark lead ${
-                homeIsHovering ||
-                skillsIsHovering ||
-                innovationIsHovering ||
-                ideaIsHovering
-                  ? hoverButtonColor
-                  : buttonsColor
+              className={`${
+                menuHover > 0 && menuHover < 5 ? hoverButtonColor : ""
+              }${menuHover === 5 ? "bg-danger" : ""}${
+                menuHover === 0 ? buttonsColor : ""
               } position-relative text-center ${
-                homeIsHovering ||
-                skillsIsHovering ||
-                innovationIsHovering ||
-                ideaIsHovering
-                  ? "d-block"
-                  : "d-none"
+                menuHover > 0 ? "d-block" : "d-none"
               }`}
               style={{
-                zIndex: 1,
-                width: "300px",
+                width: havePerms() ? "350px" : "300px",
                 left: -20,
-                top: -6,
+                top: -1,
                 pointerEvents: "none",
+                zIndex: 1070,
               }}
             >
-              {homeIsHovering && "Accueil"}
-              {skillsIsHovering && "Compétences"}
-              {innovationIsHovering && "Innovations"}
-              {ideaIsHovering && "J'ai une idée"}
+              <div
+                className={`${
+                  menuHover === 5 ? "text-white" : "text-dark"
+                } lead`}
+                style={{
+                  backgroundColor: "transparent",
+                }}
+              >
+                {menuHover === 1 && "Accueil"}
+                {menuHover === 2 && "Compétences"}
+                {menuHover === 3 && "Innovations"}
+                {menuHover === 4 && "J'ai une idée"}
+                {menuHover === 5 && "Mon espace de gestion"}
+              </div>
             </div>
           )}
         </nav>
@@ -356,3 +456,12 @@ export default function Header({ setToken, setDarkMode, setUser }) {
     </div>
   );
 }
+
+Header.propTypes = {
+  setDarkMode: PropTypes.func,
+  setUser: PropTypes.func,
+};
+Header.defaultProps = {
+  setDarkMode: null,
+  setUser: null,
+};

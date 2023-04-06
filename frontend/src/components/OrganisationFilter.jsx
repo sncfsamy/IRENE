@@ -1,21 +1,57 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { PropTypes } from "prop-types";
 import SharedContext from "../contexts/sharedContext";
 
 export default function OrganisationFilter({ values, onChange, label }) {
   const { organisations, darkMode } = useContext(SharedContext);
   const [activeOrganisations, setActiveCategories] = useState(false);
+  const elemRef = useRef();
   let statusAll = "";
-  if (organisations.length === values.length) statusAll = "active";
-  else if (values.length > 0) statusAll = "indeterminate";
+  if (organisations.length === values.length) {
+    statusAll = "active";
+  } else if (values.length > 0) {
+    statusAll = "indeterminate";
+  }
+  const click = (e) => {
+    if (elemRef.current && activeOrganisations) {
+      const contain =
+        e.target === elemRef.current || elemRef.current.contains(e.target);
+      if (!contain) {
+        setActiveCategories(false);
+      }
+    }
+  };
+  useEffect(() => {
+    if (elemRef.current && activeOrganisations) {
+      window.addEventListener("click", click);
+    } else {
+      window.removeEventListener("click", click);
+    }
+  }, [activeOrganisations]);
+
+  useEffect(() => {
+    return () => {
+      if (activeOrganisations) {
+        window.removeEventListener("click", click);
+      }
+    };
+  }, []);
   return (
     <>
-      <label htmlFor="categories">{label}</label>
+      <label htmlFor="organisations">{label}</label>
       <div
         className={`select-improved ${activeOrganisations && "active"}`}
         data-component="select-multiple"
+        ref={elemRef}
       >
         <div className="select-control">
-          <div className="input-group" data-role="select-toggle">
+          <div
+            className="input-group"
+            data-role="select-toggle"
+            data-target="test"
+            aria-hidden="true"
+            onClick={() => setActiveCategories(!activeOrganisations)}
+          >
             <div className="form-control">
               <div className="custom-control custom-checkbox">
                 <label
@@ -24,10 +60,12 @@ export default function OrganisationFilter({ values, onChange, label }) {
                   htmlFor="organisations"
                 >
                   {values.length
-                    ? `${values.length} organisation${
-                        values.length === organisations.length ? "s" : ""
-                      } sélectionnée${
-                        values.length === organisations.length ? "s" : ""
+                    ? `${
+                        values.length > 1
+                          ? `${values.length} organisations sélectionnées`
+                          : organisations.find((organisation) =>
+                              values.includes(organisation.id_organisation)
+                            ).name
                       }`
                     : "Aucune organisation sélectionnée"}
                 </label>
@@ -47,9 +85,9 @@ export default function OrganisationFilter({ values, onChange, label }) {
             >
               {organisations.map((organisation) => (
                 <option
-                  data-id={organisation.id}
-                  value={organisation.id}
-                  key={organisation.id}
+                  data-id={organisation.id_organisation}
+                  value={organisation.id_organisation}
+                  key={organisation.id_organisation}
                 >
                   {organisation.name}
                 </option>
@@ -92,19 +130,20 @@ export default function OrganisationFilter({ values, onChange, label }) {
             {organisations.map((organisation) => (
               <div
                 className="select-menu-item"
-                key={organisation.id}
+                key={organisation.id_organisation}
                 role="listitem"
               >
                 <div className="custom-control custom-checkbox w-100">
                   <button
                     type="button"
                     data-role="value"
-                    data-target={organisation.id}
-                    data-id={organisation.id}
+                    data-target={organisation.id_organisation}
+                    data-id={organisation.id_organisation}
                     onClick={onChange}
-                    aria-checked={values.includes(organisation.id)}
                     className={`custom-control-label w-100 text-left font-weight-medium text-left ${
-                      values.includes(organisation.id) ? "active" : ""
+                      values.includes(organisation.id_organisation)
+                        ? "active"
+                        : ""
                     }`}
                   >
                     {organisation.name}
@@ -118,3 +157,14 @@ export default function OrganisationFilter({ values, onChange, label }) {
     </>
   );
 }
+
+OrganisationFilter.propTypes = {
+  values: PropTypes.arrayOf(PropTypes.number),
+  onChange: PropTypes.func,
+  label: PropTypes.string,
+};
+OrganisationFilter.defaultProps = {
+  values: [],
+  onChange: null,
+  label: "",
+};

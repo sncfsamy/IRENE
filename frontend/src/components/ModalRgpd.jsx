@@ -1,24 +1,20 @@
+import { PropTypes } from "prop-types";
 import React, { useContext, useState } from "react";
 import SharedContext from "../contexts/sharedContext";
 
 export default function ModalRgpd({ setUser }) {
-  const { user, baseURL, token, setIsLoading } = useContext(SharedContext);
+  const { user, setIsLoading, customFetch } = useContext(SharedContext);
   const [rgpd, setRgpd] = useState(user.rgpd_agreement);
   const handleClick = () => {
     setIsLoading(true);
-    fetch(`${baseURL}/users/${user.id}`, {
-      method: "PUT",
-      headers: {
-        "content-type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ rgpd_agreement: true }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          setUser({ ...user, rgpd_agreement: true });
-          setIsLoading(false);
-        }
+    customFetch(
+      `${import.meta.env.VITE_BACKEND_URL}/users/${user.id_user}`,
+      "PUT",
+      { rgpd_agreement: true }
+    )
+      .then(() => {
+        setUser({ ...user, rgpd_agreement: true });
+        setIsLoading(false);
       })
       .catch((error) => {
         console.warn(error);
@@ -106,3 +102,10 @@ export default function ModalRgpd({ setUser }) {
     </div>
   );
 }
+
+ModalRgpd.propTypes = {
+  setUser: PropTypes.func,
+};
+ModalRgpd.defaultProps = {
+  setUser: null,
+};

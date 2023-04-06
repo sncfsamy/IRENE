@@ -23,55 +23,71 @@ const validateUserAtCreation = [
   body("firstname")
     .exists()
     .withMessage("Doit être spécifié.")
+    .bail()
     .isLength({ min: 3, max: 255 })
     .withMessage("Doit contenir entre 3 et 255 caractères."),
   body("lastname")
     .exists()
     .withMessage("Doit être spécifié.")
+    .bail()
     .isLength({ min: 3, max: 255 })
     .withMessage("Doit contenir entre 3 et 255 caractères."),
   body("mail")
     .exists()
     .withMessage("Doit être spécifiée.")
+    .bail()
     .isEmail()
-    .withMessage("Doit être un email valide."),
+    .withMessage("Doit être une adresse mail valide."),
   body("registration_number")
-    .isLength({ min: 3, max: 45 })
-    .withMessage("Doit être spécifié."),
-  body("role_id")
     .exists()
     .withMessage("Doit être spécifié.")
+    .bail()
+    .isLength({ min: 3, max: 45 })
+    .withMessage("Doit contenir entre 3 et 45 caractères."),
+  body("id_role")
+    .exists()
+    .withMessage("Doit être spécifié.")
+    .bail()
     .isNumeric()
-    .withMessage("Doit être un nombre entier.")
-    .isLength({ min: 1, max: 2 })
-    .withMessage("Doit contenir au moins un nombre entier."),
-
-  // (exists) Adds a validator to check for the existence of the current fields in the request. This means the value of the fields may not be undefined; all other values are acceptable.
-  body("organisation_id")
+    .withMessage(""),
+  body("id_team")
+    .exists()
+    .withMessage("Doit être spécifié.")
+    .bail()
     .isNumeric()
-    .withMessage("Doit être un nombre entier.")
-    .isLength({ min: 1, max: 2 })
-    .withMessage("Doit contenir au moins un nombre entier."),
+    .withMessage(""),
+  body("id_organisation")
+    .exists()
+    .withMessage("Doit être spécifiée.")
+    .bail()
+    .isNumeric()
+    .withMessage(""),
   body("password")
     .exists()
     .withMessage("Doit être spécifié.")
+    .bail()
     .matches(/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/)
-    // regex (Minimum eight characters, at least one letter and one number)
     .withMessage(
-      "Doit comprendre au moins 8 caractères et doit contenir au moins 1 chiffre et 1 lettre."
+      "Doit comprendre au moins 8 caractères et doit contenir au moins un chiffre et une lettre."
     ),
   terminationFunction,
 ];
 
 // Validating PUT user fields
 const validateUserAtModify = [
-  body("role_id")
+  body("id_team")
     .optional()
     .isNumeric()
     .withMessage("Doit être un nombre entier.")
     .isLength({ min: 1, max: 2 })
     .withMessage("Doit contenir au moins un nombre entier."),
-  body("organisation_id")
+  body("id_role")
+    .optional()
+    .isNumeric()
+    .withMessage("Doit être un nombre entier.")
+    .isLength({ min: 1, max: 2 })
+    .withMessage("Doit contenir au moins un nombre entier."),
+  body("id_organisation")
     .optional()
     .isNumeric()
     .withMessage("Doit être un nombre entier.")
@@ -100,15 +116,21 @@ const validateCommentAtCreation = [
     .withMessage("Doit être spécifié.")
     .isLength({ min: 1, max: 255 })
     .withMessage("Doit contenir entre 3 et 255 caractères."),
-  body("user_id")
+  body("id_user")
     .exists()
     .isNumeric()
     .withMessage("Doit être un nombre entier.")
     .isLength({ min: 1, max: 1000000 })
     .withMessage("Doit être spécifié."),
-  body("idea_id")
+  body("id_idea")
     .exists()
     .withMessage("Doit être spécifié.")
+    .isNumeric()
+    .withMessage("Doit être un nombre entier.")
+    .isLength({ min: 1, max: 10000000 })
+    .withMessage("Doit contenir au moins un nombre entier."),
+  body("id_comment")
+    .optional()
     .isNumeric()
     .withMessage("Doit être un nombre entier.")
     .isLength({ min: 1, max: 10000000 })
@@ -136,6 +158,33 @@ const validateOrganisationAtModify = [
   terminationFunction,
 ];
 
+// Validating POST comments fields
+const validateTeamAtCreation = [
+  body("name")
+    .exists()
+    .withMessage("Doit être spécifié.")
+    .isLength({ min: 1, max: 255 })
+    .withMessage("Doit contenir entre 1 et 50 caractères."),
+  terminationFunction,
+];
+
+// Validating PUT comments fields
+const validateTeamAtModify = [
+  body("name")
+    .optional()
+    .exists()
+    .withMessage("Doit être spécifié.")
+    .isLength({ min: 1, max: 255 })
+    .withMessage("Doit contenir entre 1 et 50 caractères."),
+  body("id_organisation")
+    .optional()
+    .exists()
+    .withMessage("Doit être spécifié.")
+    .isNumeric()
+    .withMessage("Doit être un nombre entier."),
+  terminationFunction,
+];
+
 // Validating POST idea fields
 const validateIdeaAtCreation = [
   body("name")
@@ -156,59 +205,65 @@ const validateIdeaAtCreation = [
     .withMessage("Doit être spécifié.")
     .custom(checkCategories)
     .withMessage("Vous devez selectionner au moins une catégorie"),
+  body("status", "Doit être un nombre entre 1 et 5")
+    .exists()
+    .isNumeric()
+    .isLength({ min: 1, max: 5 }),
   terminationFunction,
 ];
 
 // Validating PUT idea fields
 const validateIdeaAtModify = [
   body("name")
-    .exists()
-    .withMessage("Doit être spécifié.")
+    .optional()
     .isLength({ min: 1, max: 255 })
     .withMessage("Doit contenir entre 1 et 255 caractères."),
   body("description")
-    .exists()
-    .withMessage("Doit être spécifié.")
+    .optional()
     .isLength({ min: 1, max: 160 })
     .withMessage("Doit contenir entre 1 et 160 caractères."),
-  body("problem").exists().withMessage("Doit être spécifié."),
-  body("solution").exists().withMessage("Doit être spécifié."),
-  body("gains").exists().withMessage("Doit être spécifié."),
+  body("problem").optional().exists().withMessage("Doit être spécifié."),
+  body("solution").optional().exists().withMessage("Doit être spécifié."),
+  body("gains").optional().exists().withMessage("Doit être spécifié."),
   body("categories")
+    .optional()
     .exists()
     .withMessage("Doit être spécifié.")
     .custom(checkCategories)
     .withMessage("Doit contenir au moins une catégorie."),
+  body("finished_at")
+    .optional()
+    .isBoolean()
+    .withMessage("Doit être un boolean."),
+  body("status")
+    .exists()
+    .withMessage("Doit être spécifié.")
+    .isNumeric()
+    .withMessage("Doit être un nombre entier.")
+    .isLength({ min: 1, max: 5 })
+    .withMessage("Doit être un nombre entre 1 et 5."),
   terminationFunction,
 ];
 
 // Validating POST categories fields
 const validateCategoriesAtCreation = [
   body("name")
+    .optional()
     .exists()
     .withMessage("Doit être spécifié.")
     .isLength({ min: 1, max: 255 })
     .withMessage("Doit contenir entre 1 et 255 caractères."),
-  body("id_parent_categorie")
-    .isNumeric()
-    .withMessage("Doit être un nombre entier.")
-    .isLength({ min: 1 })
-    .withMessage("Doit contenir au moins un nombre entier."),
   terminationFunction,
 ];
 
 // Validating PUT categories fields
 const validateCategoriesAtModify = [
   body("name")
+    .optional()
     .exists()
     .withMessage("Doit être spécifié.")
     .isLength({ min: 1, max: 255 })
     .withMessage("Doit contenir entre 1 et 255 caractères."),
-  body("id_parent_categorie")
-    .isNumeric()
-    .withMessage("Doit être un nombre entier.")
-    .isLength({ min: 1 })
-    .withMessage("Doit contenir au moins un nombre entier."),
   terminationFunction,
 ];
 
@@ -236,7 +291,10 @@ const validateRoleAtModify = [
 // Validating POST file upload fields
 const validateUpload = [
   // body("assets").exists().withMessage("Au moins un fichier doit être envoyé."),
-  body("description", "La description que vous avez entré est trop longue (maximum 16 777 215 caractères).").isLength({ max: 16777215 }),
+  body(
+    "description",
+    "La description que vous avez entré est trop longue (maximum 16 777 215 caractères)."
+  ).isLength({ max: 16777215 }),
   terminationFunction,
 ];
 
@@ -244,15 +302,14 @@ const validateLogin = [
   body("registration_number", "Le CP doit être renseigné.")
     .exists()
     .isLength({ min: 4, max: 8 }),
-    terminationFunction,
+  terminationFunction,
 ];
 
 const validateIdeaAtNotation = [
-  body("note")
-  .exists()
-  .isNumeric(),
+  body("note").exists().isNumeric(),
   terminationFunction,
 ];
+
 module.exports = {
   validateUserAtCreation,
   validateUserAtModify,
@@ -268,4 +325,6 @@ module.exports = {
   validateUpload,
   validateLogin,
   validateIdeaAtNotation,
+  validateTeamAtCreation,
+  validateTeamAtModify,
 };

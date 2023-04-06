@@ -1,28 +1,116 @@
 /* eslint-disable react/jsx-no-constructed-context-values */
 import React, { useState, useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
-import colorMode from "./colorMode.js";
-import "@sncf/bootstrap-sncf.metier";
-import "./App.css";
+import ModalRgpd from "@components/ModalRgpd";
+import loader from "@assets/loading.webp";
+import colorMode from "./colorMode";
 import SharedContext from "./contexts/sharedContext";
 import AuthenticatedApp from "./App/AuthenticatedApp";
 import UnAuthenticatedApp from "./App/UnAuthenticatedApp";
 import Loader from "./components/Loader";
-import ModalRgpd from "@components/ModalRgpd.jsx";
-import loader from "./assets/loading.webp";
 
-const baseURL = import.meta.env.VITE_BACKEND_URL;
 function App() {
   const [user, setUser] = useState();
   const [organisations, setOrganisations] = useState([]);
   const [roles, setRoles] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [token, setToken] = useState(localStorage.getItem("IRENE_AUTH"));
+  const [teams, setTeams] = useState([]);
+  const [isLogged, setIsLogged] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(colorMode());
+  const [refreshToken, setRefreshToken] = useState(
+    localStorage.getItem("IRENE_TOKEN")
+  );
+
+  const customFetch = (url, method = "GET", data = null, noHeaders = false) => {
+    return new Promise((resolve, reject) => {
+      const options = {
+        method,
+        credentials: "include",
+        headers: {},
+      };
+      if (!noHeaders) {
+        options.headers["Content-Type"] = "application/json";
+      }
+      if (data) {
+        options.body = noHeaders ? data : JSON.stringify(data);
+      }
+
+      fetch(url, options)
+        .then(async (response) => {
+          const contentType = response.headers.get("content-type");
+          if (response.ok) {
+            resolve(
+              contentType && contentType.includes("application/json")
+                ? response.json()
+                : {}
+            );
+          } else {
+            const responseData = await response.json();
+            if (responseData && responseData.expired) {
+              const response2 = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/renew`,
+                {
+                  method: "POST",
+                  credentials: "include",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${refreshToken}`,
+                  },
+                  body: JSON.stringify({
+                    refreshExchangeToken: responseData.refreshExchangeToken,
+                  }),
+                }
+              );
+              if (response2.ok) {
+                const response3 = await fetch(url, options);
+                const contentType2 = response3.headers.get("content-type");
+                const reponseToSend =
+                  contentType2 && contentType2.includes("application/json")
+                    ? response3.json()
+                    : {};
+                if (response3.ok) {
+                  resolve(reponseToSend);
+                } else {
+                  setIsLogged(false);
+                  setUser();
+                  setRefreshToken();
+                  reject(reponseToSend);
+                }
+              } else {
+                setIsLogged(false);
+                setUser();
+                setRefreshToken();
+                reject(new Error({ errors: { msg: "Bad removal" } }));
+              }
+            } else if (responseData && responseData.loggedOut) {
+              setIsLogged(false);
+              setUser();
+              reject(new Error(responseData));
+            } else if (responseData) {
+              reject(new Error(responseData));
+            } else {
+              reject(new Error(response));
+            }
+          }
+        })
+        .then((responseData) => {
+          if (responseData && responseData.loggedOut) {
+            setIsLogged(false);
+            setUser();
+            reject(new Error({}));
+          } else {
+            resolve(responseData);
+          }
+        })
+        .catch(async (response) => {
+          console.warn("Error: ", response);
+          reject(new Error({}));
+        });
+    });
+  };
 
   function toggleDarkmode() {
-    console.log("toggledm");
     const activecss = document.getElementById("lightCSS");
     const inactivecss = document.getElementById("darkCSS");
     if (activecss && inactivecss) {
@@ -58,6 +146,7 @@ function App() {
       body.style.setProperty("--linksHoverColor", "#c58800");
       body.style.setProperty("--chipsTextColor", "#212529");
       body.style.setProperty("--formControlBorderColor", "#ffb612");
+      body.style.setProperty("--h1color", "#333");
     } else if (darkMode === 1) {
       body.classList.remove("bg-dark");
       body.classList.remove("bg-cyan");
@@ -67,6 +156,7 @@ function App() {
       body.style.setProperty("--linksHoverColor", "#0074af");
       body.style.setProperty("--chipsTextColor", "#ffffff");
       body.style.setProperty("--formControlBorderColor", "#4fc3ff");
+      body.style.setProperty("--h1color", "#333");
     } else if (darkMode === 2) {
       body.classList.remove("bg-cyan");
       body.classList.remove("bg-white");
@@ -76,89 +166,76 @@ function App() {
       body.style.setProperty("--linksHoverColor", "#0074af");
       body.style.setProperty("--chipsTextColor", "#ffffff");
       body.style.setProperty("--formControlBorderColor", "#4fc3ff");
+      body.style.setProperty("--h1color", "#fefefe");
     }
   }, [darkMode]);
 
   useEffect(() => {
-    if (token) {
-      setIsLoading(true);
-      fetch(`${baseURL}/me`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((userData) => {
-          const requests = [
-            fetch(`${baseURL}/organisations`, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }).then((response) => response.json()),
-            fetch(`${baseURL}/categories`, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }).then((response) => response.json()),
-          ];
+    customFetch(`${import.meta.env.VITE_BACKEND_URL}/me`)
+      .then((userData) => {
+        const requests = [
+          customFetch(`${import.meta.env.VITE_BACKEND_URL}/organisations`),
+          customFetch(
+            `${import.meta.env.VITE_BACKEND_URL}/categories?limit=500`
+          ),
+          customFetch(`${import.meta.env.VITE_BACKEND_URL}/teams`),
+        ];
 
-          if (userData.role_id === 3)
-            request.push(
-              fetch(`${baseURL}/roles`, {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }).then((response) => response.json())
-            );
-          Promise.all(requests)
-            .then((data) => {
-              setUser(userData);
-              setOrganisations(data[0]);
-              setCategories(data[1]);
-              if (userData.role_id === 3) setRoles(data[2]);
-              setIsLoading(false);
-            })
-            .catch((error) => {
-              setIsLoading(false);
-              console.error(error);
-            });
-        })
-        .catch((error) => {
-          setToken();
-          localStorage.removeItem("IRENE_AUTH");
-          setUser();
-          console.warn(error);
-          setIsLoading(false);
-        });
-    } else setIsLoading(false);
-  }, [token]);
+        if (userData.perms.manage_all) {
+          requests.push(
+            customFetch(`${import.meta.env.VITE_BACKEND_URL}/roles`)
+          );
+        }
+        Promise.all(requests)
+          .then((data) => {
+            setUser(userData);
+            setOrganisations(data[0]);
+            setCategories(data[1].categories);
+            setTeams(data[2]);
+            if (userData.perms.manage_all) {
+              setRoles(data[3]);
+            }
+            setIsLogged(true);
+          })
+          .catch((error) => {
+            console.error(error);
+            setIsLogged(false);
+            setIsLoading(false);
+          });
+      })
+      .catch(() => {
+        setIsLogged(false);
+        setIsLoading(false);
+      });
+  }, [isLogged]);
   return (
     <div className="App">
       <SharedContext.Provider
         value={{
+          customFetch,
           user,
-          token,
-          baseURL,
           categories,
           organisations,
+          teams,
           roles,
           darkMode,
           setIsLoading,
+          isLogged,
+          setIsLogged,
         }}
       >
         <BrowserRouter>
           {user ? (
             <AuthenticatedApp
-              setToken={setToken}
               setUser={setUser}
               setDarkMode={setDarkMode}
+              setOrganisations={setOrganisations}
+              setTeams={setTeams}
+              setRoles={setRoles}
+              setCategories={setCategories}
             />
           ) : (
-            <UnAuthenticatedApp setToken={setToken} />
+            <UnAuthenticatedApp setRefreshToken={setRefreshToken} />
           )}
         </BrowserRouter>
         {isLoading ? <Loader /> : ""}
@@ -168,7 +245,12 @@ function App() {
           ""
         )}
       </SharedContext.Provider>
-      <img src={loader} style={{width: 0, height: 0}} className="position-absolute" />
+      <img
+        src={loader}
+        alt="Loader view"
+        style={{ width: 0, height: 0 }}
+        className="position-absolute"
+      />
     </div>
   );
 }

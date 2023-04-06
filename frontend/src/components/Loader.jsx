@@ -1,10 +1,10 @@
 import React from "react";
-import LoaderGif from "../assets/loading.webp";
+import LoaderGif from "@assets/loading.webp";
 
 export default function Loader() {
   return (
     <div
-      className="position-absolute vw-100 vh-100 d-flex align-items-center"
+      className="position-fixed vw-100 vh-100 d-flex align-items-center"
       style={{
         zIndex: 1070,
         top: 0,

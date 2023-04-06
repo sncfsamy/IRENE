@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/logo_irene.png";
+import logo from "../assets/logo_irene.heif";
 
 export default function About() {
   return (
     <div className="container m-5 mx-auto p-3 pt-5 bg-dark text-light text-justify rounded">
-      <Link to="/">
+      <Link to={`${import.meta.env.VITE_FRONTEND_URI}`}>
         <img
           className="img mx-auto d-block vh-10 w-auto"
           src={logo}

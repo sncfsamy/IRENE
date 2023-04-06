@@ -16,9 +16,9 @@ function ErrorComponent({ message, title, image }) {
         </div>
       )}
       {message && (
-        <ul className="mt-3 mb-0 meta-list">
+        <ul className="mt-3 mb-0 list-unstyled">
           {message.map((text) => (
-            <li>{text}</li>
+            <li key={text}>{text}</li>
           ))}
         </ul>
       )}

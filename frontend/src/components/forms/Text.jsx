@@ -11,16 +11,17 @@ function Text({
   errorMessages,
   className,
   readOnly,
+  maxChars,
 }) {
   return (
-    <div className={`form-group ${className}`}>
+    <div className="form-group">
       <label htmlFor={id} className={required ? "required" : ""}>
         {label}
       </label>
       <div
         className={`form-control-container ${
           errorMessages.length ? "is-invalid" : ""
-        } ${className}`}
+        }`}
       >
         <input
           type={type}
@@ -29,20 +30,47 @@ function Text({
           title={placeholder}
           placeholder={placeholder}
           value={value}
-          onChange={onChange}
+          onChange={(e) =>
+            onChange({
+              ...e,
+              target: {
+                ...e.target,
+                id: e.target.id,
+                value: maxChars
+                  ? e.target.value.substring(0, maxChars)
+                  : e.target.value,
+              },
+            })
+          }
           required={required}
           readOnly={readOnly}
           aria-describedby={`${id}_error`}
           autoComplete="off"
         />
-        <span className={`form-control-state ${className}`} />
+        <span className="form-control-state" />
       </div>
+      {maxChars ? (
+        <div
+          className="mt-2 font-weight-medium text-right"
+          data-role="counter"
+          data-limit={maxChars}
+          id="charcounter"
+        >
+          <span data-role="counter-value">{value.length}</span>/{maxChars}
+        </div>
+      ) : (
+        ""
+      )}
       <div
-        className={`invalid-feedback ${className}`}
+        className="invalid-feedback"
         id={`${id}_error`}
-        style={{ display: errorMessages.length ? "block" : "none" }}
+        style={{ display: errorMessages.length ? "d-block" : "d-none" }}
       >
-        {errorMessages.map((err) => err.msg)}
+        {errorMessages
+          .filter((err) => err.msg)
+          .map((err) => (
+            <div className="d-block">{err.msg}</div>
+          ))}
       </div>
     </div>
   );
@@ -57,6 +85,7 @@ Text.propTypes = {
   onChange: PropTypes.func.isRequired,
   required: PropTypes.bool,
   readOnly: PropTypes.bool,
+  maxChars: PropTypes.string,
   errorMessages: PropTypes.arrayOf(
     PropTypes.shape({
       value: PropTypes.string,
@@ -75,6 +104,7 @@ Text.defaultProps = {
   required: false,
   readOnly: false,
   errorMessages: [],
+  maxChars: null,
 };
 
 export default Text;

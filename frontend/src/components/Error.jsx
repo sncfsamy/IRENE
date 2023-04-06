@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 
 export default function ErrorComponent({
@@ -20,3 +21,19 @@ export default function ErrorComponent({
     </div>
   );
 }
+
+ErrorComponent.propTypes = {
+  errorMessage: PropTypes.arrayOf(
+    PropTypes.shape({
+      param: PropTypes.string,
+      msg: PropTypes.string,
+    })
+  ),
+  errorTitle: PropTypes.string,
+  linkToHome: PropTypes.bool,
+};
+ErrorComponent.defaultProps = {
+  errorMessage: [],
+  errorTitle: "Oooops ! Nous avons un problème...",
+  linkToHome: false,
+};

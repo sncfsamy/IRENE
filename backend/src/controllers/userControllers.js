@@ -4,45 +4,50 @@ const models = require("../models");
 const { hashingParams } = require("../auth");
 
 const browse = (req, res) => {
-  models.user
-    .findAll()
-    .then(([rows]) => {
-      res.send(
-        rows.map((user) => {
-          const newUser = { ...user };
-          if (req.payload.role !== 4) {
-            delete newUser.role_id;
-          }
-          return newUser;
-        })
-      );
+  let page = parseInt(req.query.page, 10);
+  let limit = parseInt(req.query.limit, 10);
+  limit = Math.min(Number.isNaN(limit) ? 20 : limit, 100);
+  page = Number.isNaN(page) ? 1 : page;
+  const offset = limit * (page - 1);
+  Promise.all(models.user.findAll(req.query.search_terms, limit, offset))
+    .then(([[rows], [[{ total }]]]) => {
+      res.send({ users: rows, total });
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
 
 const read = (req, res) => {
+  const id = parseInt(req.params.id, 10);
   models.user
-    .find(req.params.id)
+    .find(id)
     .then(([rows]) => {
       if (rows[0] == null) {
         res.sendStatus(404);
       } else {
-        const user = { ...rows[0] };
-        if (req.payload.role !== 4) {
-          delete user.role_id;
-          if (user.id !== req.payload.sub) {
-            delete user.rgpd_agreement;
-            delete user.mail_notification;
-          }
-        }
-        res.send(user);
+        models.user
+          .findManager(rows[0].id_team)
+          .then(([managerData]) => {
+            const user = { ...rows[0], id_user: id, managers: managerData };
+            if (!req.perms.manage_users && !req.perms.manage_all) {
+              delete user.id_role;
+              if (id !== req.payload.sub) {
+                delete user.rgpd_agreement;
+                delete user.mail_notification;
+              }
+            }
+            res.send(user);
+          })
+          .catch((err) => {
+            console.error(err);
+            res.sendStatus(500);
+          });
       }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
@@ -54,7 +59,30 @@ const me = (req, res) => {
       if (rows[0] == null) {
         res.sendStatus(404);
       } else {
-        res.json(rows[0]);
+        Promise.all([
+          models.user.findManager(rows[0].id_team),
+          models.role.find(req.payload.role),
+          models.userCategorie.find(req.payload.sub),
+        ])
+          .then(([[managerData], [[role]], [categories]]) => {
+            const perms = {};
+            for (const param in role) {
+              if (param !== "id_role" && param !== "name" && role[param])
+                perms[param] = true;
+            }
+            res.json({
+              ...rows[0],
+              id_user: req.payload.sub,
+              managers: managerData,
+              perms,
+              upload_token: req.payload.upload_token,
+              categories: categories.map((categorie) => categorie.id_categorie),
+            });
+          })
+          .catch((err) => {
+            console.error(err);
+            res.sendStatus(500);
+          });
       }
     })
     .catch((err) => {
@@ -87,25 +115,42 @@ const edit = (req, res) => {
       });
     }
   }
-  if (req.payload.role >= 3) {
-    if (user.id_manager != null) {
+  if (req.perms.manage_users || req.perms.manage_all) {
+    if (user.id_organisation != null) {
       update.push({
-        column: "id_manager",
-        value: parseInt(user.id_manager, 10),
+        column: "id_organisation",
+        value: parseInt(user.id_organisation, 10),
       });
     }
-    if (user.organisation_id != null) {
+    if (user.id_role != null) {
       update.push({
-        column: "organisation_id",
-        value: parseInt(user.organisation_id, 10),
+        column: "id_role",
+        value: parseInt(user.id_role, 10),
       });
     }
-    if (req.payload.role === 4 && user.role_id != null) {
+    if (user.id_team != null) {
       update.push({
-        column: "role_id",
-        value: parseInt(user.role_id, 10),
+        column: "id_team",
+        value: parseInt(user.id_team, 10),
       });
     }
+  }
+  if (
+    req.payload.sub === id &&
+    req.body.categories &&
+    req.body.categories.length
+  ) {
+    models.userCategorie
+      .delete(id)
+      .then(() => {
+        models.userCategorie.add(
+          id,
+          req.body.categories
+            .map((cid) => parseInt(cid, 10))
+            .filter((cid) => !Number.isNaN(cid))
+        );
+      })
+      .catch((err) => console.warn(err));
   }
   if (update.length) {
     models.user
@@ -137,19 +182,20 @@ const destroy = (req, res) => {
       }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
 
-const browseSkills = (req, res) => {
+const batchDestroy = (req, res) => {
+  const ids = req.query.ids.split(",").filter((id) => !Number.isNaN(id));
   models.user
-    .findAllBySkills(req.query.search_terms)
-    .then(([rows]) => {
-      if (rows == null) {
+    .deleteIds(ids)
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
         res.sendStatus(404);
       } else {
-        res.send(rows);
+        res.sendStatus(204);
       }
     })
     .catch((err) => {
@@ -158,16 +204,51 @@ const browseSkills = (req, res) => {
     });
 };
 
+const browseSkills = (req, res) => {
+  const page = parseInt(req.query.page ?? 1, 10);
+  const offset = ((Number.isNaN(page) ? 1 : page) - 1) * 20;
+  Promise.all(models.user.findAllBySkills(req.query.search_terms, offset))
+    .then(([[rows], [[{ total }]]]) => {
+      if (rows == null || total === 0) {
+        res.sendStatus(404);
+      } else {
+        res.send({ users: rows, total });
+      }
+    })
+    .catch((err) => {
+      console.warn(err);
+      res.sendStatus(500);
+    });
+};
+
 const add = (req, res) => {
   models.user
     .insert(req.body)
     .then(([result]) => {
-      res.location(`/users/${result.insertId}`).sendStatus(201);
+      if (result.insertId) {
+        const id = result.insertId;
+        res.status(201).json({ id });
+      } else {
+        res.sendStatus(500);
+      }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
+};
+
+const logout = (req, res) => {
+  res
+    .cookie("irene_auth", "", {
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: true,
+      secure: false,
+      domain: process.env.COOKIE_DOMAIN,
+    })
+    .status(200)
+    .send();
 };
 
 const login = (req, res) => {
@@ -178,23 +259,53 @@ const login = (req, res) => {
         .verify(user.password, req.body.password, hashingParams)
         .then((isVerified) => {
           if (isVerified) {
+            const now = Math.floor(new Date().getTime() / 1000);
+            const ckEditorUploadtoken = jwt.sign(
+              {
+                sub: user.id_user,
+                iat: Math.floor(new Date().getTime() / 1000),
+                exp: Math.floor(new Date().getTime() / 1000) + 10800,
+              },
+              process.env.JWT_CKEDITOR_UPLOAD_SECRET
+            );
             const token = jwt.sign(
               {
-                sub: user.id,
-                role: user.role_id,
-                organisation: user.organisation_id,
+                sub: user.id_user,
+                team: user.id_team,
+                role: user.id_role,
+                organisation: user.id_organisation,
+                upload_token: ckEditorUploadtoken,
                 iat: Math.floor(new Date().getTime() / 1000),
-                exp: Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3,
+                exp: now + parseInt(process.env.TOKEN_VALIDITY, 10),
               },
               process.env.JWT_SECRET
             );
-            res.json({ token });
+            const refreshToken = jwt.sign(
+              {
+                sub: user.id_user,
+                iat: Math.floor(new Date().getTime() / 1000),
+                exp: now + parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10),
+              },
+              process.env.JWT_REFRESH_SECRET + user.id_user
+            );
+            res
+              .cookie("irene_auth", token, {
+                maxAge: process.env.TOKEN_RENEWAL_VALIDITY * 1000,
+                httpOnly: true,
+                sameSite: true,
+                secure: false,
+                domain: process.env.COOKIE_DOMAIN,
+              })
+              .status(200)
+              .json({
+                irene_refresh: refreshToken,
+              });
           } else {
             res.sendStatus(403);
           }
         })
         .catch((err) => {
-          console.error(err);
+          console.warn(err);
           res.sendStatus(500);
         });
     })
@@ -204,16 +315,28 @@ const login = (req, res) => {
 };
 
 const searchUsers = (req, res) => {
-  models.user
-    .search(req.query.search_terms.split(" "))
-    .then((results) => {
-      console.log(results)
-      res.json(results[0]);
-    })
-    .catch((err) => {
-      console.error(err);
-      res.sendStatus(404);
-    });
+  if (req.query.search_terms) {
+    models.user
+      .search(req.query.search_terms.split(" "))
+      .then((results) => {
+        res.json(results[0]);
+      })
+      .catch((err) => {
+        console.warn(err);
+        res.sendStatus(404);
+      });
+  } else if (req.query.users) {
+    const idsUsers = req.query.users.split(",").map((id) => parseInt(id, 10));
+    models.user
+      .findSome(idsUsers)
+      .then(([rows]) => {
+        res.send(rows);
+      })
+      .catch((err) => {
+        console.warn(err);
+        res.sendStatus(500);
+      });
+  } else res.sendStatus(404);
 };
 
 module.exports = {
@@ -225,5 +348,7 @@ module.exports = {
   browseSkills,
   add,
   login,
+  logout,
   searchUsers,
+  batchDestroy,
 };

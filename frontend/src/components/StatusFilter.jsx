@@ -1,4 +1,5 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { PropTypes } from "prop-types";
 import SharedContext from "../contexts/sharedContext";
 
 const status = [
@@ -10,19 +11,53 @@ const status = [
 ];
 export default function StatusFilter({ values, onChange, label }) {
   const { darkMode } = useContext(SharedContext);
-  const [activeStatus, setActiveCategories] = useState(false);
+  const [activeStatus, setActiveStatus] = useState(false);
+  const elemRef = useRef();
   let statusAll = "";
-  if (status.length === values.length) statusAll = "active";
-  else if (values.length > 0) statusAll = "indeterminate";
+  if (status.length === values.length) {
+    statusAll = "active";
+  } else if (values.length > 0) {
+    statusAll = "indeterminate";
+  }
+  const click = (e) => {
+    if (elemRef.current && activeStatus) {
+      const contain =
+        e.target === elemRef.current || elemRef.current.contains(e.target);
+      if (!contain) {
+        setActiveStatus(false);
+      }
+    }
+  };
+  useEffect(() => {
+    if (elemRef.current && activeStatus) {
+      window.addEventListener("click", click);
+    } else {
+      window.removeEventListener("click", click);
+    }
+  }, [activeStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (activeStatus) {
+        window.removeEventListener("click", click);
+      }
+    };
+  }, []);
   return (
     <>
-      <label htmlFor="categories">{label}</label>
+      <label htmlFor="status">{label}</label>
       <div
         className={`select-improved ${activeStatus && "active"}`}
         data-component="select-multiple"
+        ref={elemRef}
       >
         <div className="select-control">
-          <div className="input-group" data-role="select-toggle">
+          <div
+            className="input-group"
+            data-role="select-toggle"
+            aria-hidden="true"
+            onClick={() => setActiveStatus(!activeStatus)}
+          >
             <div className="form-control">
               <div className="custom-control custom-checkbox">
                 <label
@@ -31,10 +66,12 @@ export default function StatusFilter({ values, onChange, label }) {
                   htmlFor="status"
                 >
                   {values.length
-                    ? `${values.length} status sélectionné${
-                        values.length === status.length ? "s" : ""
+                    ? `${
+                        values.length > 1
+                          ? `${values.length} status sélectionnées`
+                          : status[values[0]]
                       }`
-                    : "Aucun status sélectionné"}
+                    : "Aucune status sélectionnée"}
                 </label>
               </div>
             </div>
@@ -69,7 +106,7 @@ export default function StatusFilter({ values, onChange, label }) {
                 type="button"
                 aria-expanded={activeStatus}
                 aria-controls="status_selector"
-                onClick={() => setActiveCategories(!activeStatus)}
+                onClick={() => setActiveStatus(!activeStatus)}
               >
                 <i
                   className="icons-arrow-down icons-size-x75"
@@ -99,7 +136,6 @@ export default function StatusFilter({ values, onChange, label }) {
                     data-target={i}
                     data-id={i}
                     onClick={onChange}
-                    aria-checked={values.includes(i)}
                     className={`custom-control-label w-100 text-left font-weight-medium text-left ${
                       values.includes(i) ? "active" : ""
                     }`}
@@ -115,3 +151,14 @@ export default function StatusFilter({ values, onChange, label }) {
     </>
   );
 }
+
+StatusFilter.propTypes = {
+  values: PropTypes.arrayOf(PropTypes.number),
+  onChange: PropTypes.func,
+  label: PropTypes.string,
+};
+StatusFilter.defaultProps = {
+  values: [],
+  onChange: null,
+  label: "",
+};

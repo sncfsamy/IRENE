@@ -2,19 +2,19 @@ const AbstractManager = require("./AbstractManager");
 
 class IdeaCategorieManager extends AbstractManager {
   constructor() {
-    super({ table: "idea_categorie" });
+    super({ table: "idea_categorie", id: "id_idea" });
   }
 
   find(idIdea) {
     return this.database.query(
-      `select categorie_id from  ${this.table} where idea_id = ?`,
+      `SELECT id_categorie FROM  ${this.table} WHERE ${this.id} = ?`,
       [idIdea]
     );
   }
 
   findAll(idsIdeas) {
     return this.database.query(
-      `select * from  ${this.table} where idea_id in (?)`,
+      `SELECT * FROM  ${this.table} WHERE ${this.id} IN (?)`,
       [idsIdeas]
     );
   }
@@ -25,28 +25,19 @@ class IdeaCategorieManager extends AbstractManager {
       .map((d) => parseInt(d, 10))
       .filter((d) => !Number.isNaN(d));
     return this.database.query(
-      `select idea_id from idea_categorie where categorie_id in (${data.join(",")})`,
+      `SELECT id_idea FROM idea_categorie WHERE id_categorie IN (${data.join(
+        ","
+      )})`,
       []
     );
   }
 
-  delete(idIdea) {
-    return this.database.query(`delete from ${this.table} where idea_id = ?`, [
-      idIdea,
-    ]);
-  }
-
-  add(categories, idIdea) {
-    const initialSql = `insert into ${this.table}`;
-    const data = [];
-    for (let i = 0; i < categories.length; i += 1) {
-      data.push(categories[i]);
-      data.push(idIdea);
-    }
+  add(categories, data) {
+    const initialSql = `INSERT INTO ${this.table}`;
     const query = categories.reduce(
       (sql, _, index) =>
         `${sql} ${
-          index === 0 ? "(categorie_id, idea_id) values " : ", "
+          index === 0 ? "(id_categorie, id_idea) VALUES " : ", "
         } (?, ?)`,
       initialSql
     );

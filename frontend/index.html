@@ -2,9 +2,6 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      const global = globalThis;
-    </script>
     <link
       rel="apple-touch-icon"
       sizes="180x180"
@@ -28,25 +25,33 @@
       href="/src/assets/safari-pinned-tab.svg"
       color="#000000"
     />
-    <link
-      title="Light"
-      href="/node_modules/@sncf/bootstrap-sncf.metier/dist/bootstrap-sncf.min.css"
-      id="lightCSS"
-      rel="stylesheet"
-    />
-    <link
-      title="Other"
-      href="/node_modules/@sncf/bootstrap-sncf.metier/dist/bootstrap-sncf.darkmode.min.css"
-      id="darkCSS"
-      rel="stylesheet alternate"
-    />
     <meta name="msapplication-TileColor" content="#da532c" />
     <meta name="theme-color" content="#333333" />
+    <link
+      rel="stylesheet"
+      id="lightCSS"
+      href="/sncf/bootstrap-sncf.min.css"
+      type="text/css"
+      media="all"
+    />
+    <link
+      rel="stylesheet alternate"
+      id="darkCSS"
+      href="/sncf/bootstrap-sncf.darkmode.min.css"
+      type="text/css"
+      media="all"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
     <title>IRENE</title>
   </head>
 
-  <body>
-    <div id="root"></div>
+  <body class="bg-cyan">
+    <div id="root" class="vh-100"></div>
+    <script type="text/javascript" src="/sncf/bootstrap-sncf.min.js"></script>
+    <script type="text/javascript" src="/src/ckeditor/ckeditor.js"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -1,9 +1,10 @@
 const models = require("../models");
-const { loadPermissions } = require("../auth");
+
+let loadPermissions;
 
 const browse = (req, res) => {
   models.role
-    .findAll()
+    .findAll(req.perms.manage_all || req.perms.manage_organisations)
     .then(([rows]) => {
       res.send(rows);
     })
@@ -13,9 +14,19 @@ const browse = (req, res) => {
     });
 };
 
+const loadPermsData = (loadPermissionsFunction) => {
+  loadPermissions = loadPermissionsFunction;
+  models.role
+    .findAll()
+    .then(([rows]) => {
+      loadPermissions(rows);
+    })
+    .catch((err) => console.warn(err));
+};
+
 const edit = (req, res) => {
   const id = parseInt(req.params.id, 10);
-  req.body.id = id;
+  req.body.id_role = id;
   models.role
     .update(req.body)
     .then(([result]) => {
@@ -23,11 +34,12 @@ const edit = (req, res) => {
         res.sendStatus(404);
       } else {
         res.sendStatus(204);
-        models.role.findAll()
-        .then(([results]) => {
-          loadPermissions(results);
-        })
-        .catch();
+        models.role
+          .findAll()
+          .then(([results]) => {
+            loadPermissions(results);
+          })
+          .catch();
       }
     })
     .catch((err) => {
@@ -43,12 +55,11 @@ const add = (req, res) => {
       if (result.insertId) {
         const id = result.insertId;
         res.status(201).json({ id });
-        models.role.findAll()
-        .then(([results]) => {
+        models.role.findAll().then(([results]) => {
           loadPermissions(results);
-        })
+        });
       } else {
-        res.sendStatus(400);
+        res.sendStatus(500);
       }
     })
     .catch((err) => {
@@ -65,10 +76,26 @@ const destroy = (req, res) => {
         res.sendStatus(404);
       } else {
         res.sendStatus(204);
-        models.role.findAll()
-        .then(([results]) => {
+        models.role.findAll().then(([results]) => {
           loadPermissions(results);
-        })
+        });
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      res.sendStatus(500);
+    });
+};
+
+const batchDestroy = (req, res) => {
+  const ids = req.query.ids.split(",").filter((id) => !Number.isNaN(id));
+  models.role
+    .deleteIds(ids)
+    .then(([result]) => {
+      if (result.affectedRows === 0) {
+        res.sendStatus(404);
+      } else {
+        res.sendStatus(204);
       }
     })
     .catch((err) => {
@@ -79,7 +106,9 @@ const destroy = (req, res) => {
 
 module.exports = {
   browse,
+  loadPermsData,
   edit,
   add,
   destroy,
+  batchDestroy,
 };

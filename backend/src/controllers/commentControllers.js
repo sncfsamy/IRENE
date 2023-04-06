@@ -35,7 +35,11 @@ const add = (req, res) => {
     .insert(comment)
     .then(([result]) => {
       if (result.insertId) {
-        res.sendStatus(201);
+        const idComment = result.insertId;
+        if (req.body.assets) {
+          models.asset.setIdComment(req.body.assets, idComment);
+        }
+        res.status(201).json({ idComment });
       } else {
         res.sendStatus(400);
       }

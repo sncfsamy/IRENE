@@ -2,18 +2,70 @@ const AbstractManager = require("./AbstractManager");
 
 class UserManager extends AbstractManager {
   constructor() {
-    super({ table: "user" });
+    super({ table: "user", id: "id_user" });
+    this.join = {
+      organisation: "organisation",
+      team: "team",
+    };
   }
 
-  findAll() {
-    return this.database.query(`
-    SELECT id_user, firstname, lastname, registration_number, mail, id_organisation, id_team, id_role FROM ${this.table}`);
+  findAll(searchTerms, limit, offset) {
+    const initialSql = `SELECT id_user, firstname, lastname, registration_number, mail, id_organisation, id_team, id_role FROM ${this.table}`;
+    const initialSqlWithSearch = `SELECT u.id_user, u.firstname, u.lastname, u.registration_number, u.mail, u.id_organisation, u.id_team, u.id_role FROM ${this.table} AS u`;
+    let countSql = `SELECT COUNT(*) AS total FROM ${this.table} AS u`;
+
+    let sql = initialSql;
+    const sqlData = [];
+    if (searchTerms && searchTerms.length) {
+      sql = `${initialSqlWithSearch} WHERE firstname LIKE ? OR lastname LIKE ? OR registration_number LIKE ? OR (SELECT o.name FROM ${this.join.organisation} AS o WHERE o.id_organisation = u.id_organisation) LIKE ? OR (SELECT t.name FROM ${this.join.team} AS t WHERE t.id_team = u.id_team) LIKE ?`;
+      countSql = `${countSql} ${sql.replace(initialSqlWithSearch, "")}`;
+      sqlData.push(searchTerms);
+      sqlData.push(`%${searchTerms}%`);
+      sqlData.push(`%${searchTerms}%`);
+      sqlData.push(`%${searchTerms}%`);
+      sqlData.push(`%${searchTerms}%`);
+      sqlData.push(`%${searchTerms}%`);
+    }
+    sqlData.push(limit);
+    sqlData.push(offset);
+    return [
+      this.database.query(`${sql} LIMIT ${limit} OFFSET ${offset}`, sqlData),
+      this.database.query(
+        searchTerms && searchTerms.length
+          ? countSql
+          : sql.replace(initialSql, countSql),
+        sqlData
+      ),
+    ];
   }
 
-  find(id) {
+  find(idUser) {
     return this.database.query(
       `SELECT firstname, lastname, registration_number, skills, mail, id_organisation, id_team, id_role, rgpd_agreement, mail_notification FROM ${this.table} WHERE id_user = ?`,
-      [id]
+      [idUser]
+    );
+  }
+
+  findSome(idUsers) {
+    return this.database.query(
+      `SELECT firstname, lastname, id_user, id_organisation, id_team FROM ${
+        this.table
+      } WHERE ${this.id} IN (${idUsers.join(",")})`
+    );
+  }
+
+  findTeams(idTeams) {
+    return this.database.query(
+      `SELECT id_user, firstname, lastname, id_organisation, id_team, id_role FROM ${
+        this.table
+      } WHERE id_team IN (${idTeams.join(",")})`
+    );
+  }
+
+  findManager(idTeam) {
+    return this.database.query(
+      `SELECT firstname, lastname, id_user, mail FROM ${this.table} WHERE id_role = 2 AND id_team = ?`,
+      [idTeam]
     );
   }
 
@@ -31,7 +83,7 @@ class UserManager extends AbstractManager {
 
   insert(user) {
     return this.database.query(
-      `INSERT INTO ${this.table} (firstname, lastname, mail, registration_number, id_organisation, id_team, id_role, password) VALLUES (?,?,?,?,?,?,?)`,
+      `INSERT INTO ${this.table} (firstname, lastname, mail, registration_number, id_organisation, id_team, id_role, password) VALUES (?,?,?,?,?,?,?,?)`,
       [
         user.firstname,
         user.lastname,
@@ -45,29 +97,34 @@ class UserManager extends AbstractManager {
     );
   }
 
-  findAllBySkills(searchTerms) {
-    return this.database.query(
-      `
-    SELECT id_user, firstname, lastname, mail, skills, id_organisation, id_team FROM ${this.table} WHERE skills LIKE ?`,
-      [`%${searchTerms}%`]
-    );
+  findAllBySkills(searchTerms, offset) {
+    return [
+      this.database.query(
+        `SELECT id_user, firstname, lastname, mail, skills, id_organisation, id_team FROM ${this.table} WHERE skills LIKE ? LIMIT 20 OFFSET ?`,
+        [`%${searchTerms}%`, offset]
+      ),
+      this.database.query(
+        `SELECT COUNT(*) AS total FROM ${this.table} WHERE skills LIKE ?`,
+        [`%${searchTerms}%`]
+      ),
+    ];
   }
 
   search(searchTerms) {
-    const initialSql = `SELECT firstname, lastname, id_user, id_organisation FROM ${this.table}`;
+    const initialSql = `SELECT firstname, lastname, id_user, id_organisation, id_team FROM ${this.table}`;
     const data = [];
     searchTerms.forEach((term) => {
       data.push(`%${term}%`);
       data.push(`%${term}%`);
     });
     return this.database.query(
-      searchTerms.reduce(
+      `${searchTerms.reduce(
         (sql, _, i) =>
           `${sql} ${
             i === 0 ? "WHERE" : "OR"
           } firstname LIKE ? OR lastname LIKE ?`,
         initialSql
-      ),
+      )} LIMIT 5`,
       data
     );
   }
@@ -79,10 +136,10 @@ class UserManager extends AbstractManager {
     );
   }
 
-  getUsersFromIds(ids_users) {
+  getUsersFromIds(idsUser) {
     return this.database.query(
       `SELECT firstname, lastname, id_organisation, id_team FROM ${this.table} WHERE id_user IN (?)`,
-      [ids_users]
+      [idsUser]
     );
   }
 }

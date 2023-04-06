@@ -1,5 +1,5 @@
 import { PropTypes } from "prop-types";
-import { forwardRef, useContext, useState } from "react";
+import { forwardRef, useContext, useEffect, useState } from "react";
 import ReactDatePicker, {
   registerLocale,
   setDefaultLocale,
@@ -16,7 +16,11 @@ const CustomInput = forwardRef(({ value, onClick, id }, ref) => {
   return (
     <div>
       <div className="input-group" data-toggle="collapsing">
-        <div className="form-control-container">
+        <div
+          className="form-control-container"
+          onClick={onClick}
+          aria-hidden="true"
+        >
           <input
             id={id}
             type=""
@@ -59,37 +63,52 @@ CustomInput.defaultProps = {
   onClick: undefined,
 };
 
-function DatePicker({ label, id, fonction, value }) {
-  const [date, setDate] = useState(value && new Date(value));
+function DatePicker({ label, id, onChange, value, className }) {
+  let targetdDate = new Date(value ? value * 1000 : Date.now());
+  if (targetdDate.getTime() === 0) {
+    targetdDate = new Date(Date.now());
+  }
+  const [date, setDate] = useState(targetdDate);
+  useEffect(() => {
+    targetdDate = new Date(value ? value * 1000 : Date.now());
+    if (targetdDate.getTime() === 0) {
+      targetdDate = new Date(Date.now());
+    }
+    setDate(targetdDate);
+  }, [value]);
   return (
-    <>
+    <div className={className}>
       <label htmlFor={id} className="font-weight-medium mb-2">
         {label}
       </label>
       <ReactDatePicker
-        selected={value ? date : ""}
+        selected={date}
         id={id}
         onChange={(changedDate) => {
+          const newDate = new Date(changedDate.getTime());
+          newDate.setHours(0, 0, 0, 0);
           setDate(changedDate);
-          fonction({
-            target: { id, value: Math.floor(changedDate.getTime() / 1000) },
+          onChange({
+            target: { id, value: Math.floor(newDate.getTime() / 1000) },
           });
         }}
         customInput={<CustomInput />}
         dateFormat="dd/MM/yyyy"
       />
-    </>
+    </div>
   );
 }
 DatePicker.propTypes = {
   label: PropTypes.string,
   id: PropTypes.string.isRequired,
   value: PropTypes.number,
-  fonction: PropTypes.func.isRequired,
+  onChange: PropTypes.func.isRequired,
+  className: PropTypes.string,
 };
 DatePicker.defaultProps = {
   label: "label",
   value: undefined,
+  className: "",
 };
 
 export default DatePicker;

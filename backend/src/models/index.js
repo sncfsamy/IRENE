@@ -39,6 +39,10 @@ const IdeaCategorieManager = require("./IdeaCategorieManager");
 const AuthorManager = require("./AuthorManager");
 const TeamManager = require("./TeamManager");
 const RoleManager = require("./RoleManager");
+const NoteManager = require("./NoteManager");
+const UserCategorieManager = require("./UserCategorieManager");
+const ChallengeManager = require("./ChallengeManager");
+const ChallengerManager = require("./ChallengerManager");
 
 models.user = new UserManager();
 models.user.setDatabase(pool);
@@ -69,6 +73,18 @@ models.team.setDatabase(pool);
 
 models.role = new RoleManager();
 models.role.setDatabase(pool);
+
+models.note = new NoteManager();
+models.note.setDatabase(pool);
+
+models.userCategorie = new UserCategorieManager();
+models.userCategorie.setDatabase(pool);
+
+models.challenge = new ChallengeManager();
+models.challenge.setDatabase(pool);
+
+models.challenger = new ChallengerManager();
+models.challenger.setDatabase(pool);
 
 const handler = {
   get(obj, prop) {

@@ -1,24 +1,7 @@
+const path = require("path");
+const fs = require("fs");
 const models = require("../models");
 
-/* affichage des innovs répondant aux filtrages et aux ordonnancements:
-  body = {
-    search_filters = {
-      users: [1,2,...],
-      status: [0,1,2,...],
-      organisation: [2,3,17,...],
-      keywords: "expression à rechercher",
-      created_at: { from: date, to: date },
-      finished_at: { from: date, to: date },
-      manager_validated_at: { from: date, to: date },
-      ambassador_validated_at: { from: date, to: date }
-    },
-    ordering = [ {  order: x, column: y } ]
-  }
-
-  Pour le parametre ordering: 
-    x = 0 pour ASC et 1 pour DESC
-    y = int dans ces colonnes:
-*/
 const orderingColumns = [
   "created_at", // 0
   "finished_at", // 1
@@ -33,27 +16,31 @@ const browse = async (req, res) => {
   const orderParams = [];
   let page = parseInt(req.query.page, 10);
   let limit = parseInt(req.query.limit, 10);
-  limit = Number.isNaN(limit) ? 20 : limit;
+  limit = Math.min(Number.isNaN(limit) ? 20 : limit, 100);
   page = Number.isNaN(page) ? 1 : page;
   const offset = limit * (page - 1);
-  if (req.query.categories) {
+  if (req.query.categories && req.query.categories.length) {
     const data = await models.ideaCategorie.findIdeaIdsByCategoriesIds(
       req.query.categories
     );
     if (data[0] && data[0].length) {
       const idsByCategorie = [];
-      data[0].forEach((ideaId) => idsByCategorie.push(ideaId.idea_id));
+      data[0].forEach(
+        (idea) =>
+          !idsByCategorie.includes(idea.id_idea) &&
+          idsByCategorie.push(idea.id_idea)
+      );
       searchFilters.push({
-        column: "id",
+        column: "id_idea",
         value: idsByCategorie.join(","),
         operator: "IN",
       });
     }
   }
-  if (req.query.user_id) {
+  if (req.query.users) {
     searchFilters.push({
-      column: "user_id",
-      value: req.query.user_id,
+      column: "a.id_user",
+      value: req.query.users,
       operator: "IN",
     });
   }
@@ -66,15 +53,29 @@ const browse = async (req, res) => {
   }
   if (req.query.organisations) {
     searchFilters.push({
-      column: "organisation_id",
+      column: "id_organisation",
       value: req.query.organisations,
       operator: "IN",
     });
   }
-  if (req.query.keywords) {
+  if (
+    req.query.teams &&
+    req.query.teams.length &&
+    req.query.teams.split(",").length
+  ) {
+    const data = await models.user.findTeams(req.query.teams.split(","));
+    if (data[0] && data[0].length) {
+      searchFilters.push({
+        column: "a.id_user",
+        value: data[0].map((user) => user.id_user).join(","),
+        operator: "IN",
+      });
+    }
+  }
+  if (req.query.search_terms) {
     searchFilters.push({
-      column: "MATCH(name,description,problem,solution,gains)", // nécessite un index fulltext sur ces colonnes
-      value: req.query.keywords,
+      column: "MATCH(i.name,i.description,i.problem,i.solution,i.gains)", // nécessite un index fulltext sur ces colonnes
+      value: req.query.search_terms,
       operator: "AGAINST(",
     });
   }
@@ -134,87 +135,48 @@ const browse = async (req, res) => {
         60 * 60 * 24,
     });
   }
+
+  if (!req.perms.manage_ideas_all && !req.perms.manage_all) {
+    searchFilters.push({
+      column: "i.status",
+      value: "1,2,3,5",
+      operator: "IN",
+    });
+  }
+
   if (req.query.order) {
-    req.query.order.forEach((orderElement) =>
-      orderParams.push({
-        column: orderingColumns[orderElement.column],
-        order: parseInt(orderElement.order, 10) === 1 ? "DESC" : "ASC",
-      })
-    );
+    orderParams.push({
+      column: orderingColumns[parseInt(req.query.order_by ?? 0, 10)],
+      order: parseInt(req.query.order, 10) === 0 ? "DESC" : "ASC",
+    });
   }
   Promise.all(models.idea.findAll(searchFilters, orderParams, limit, offset))
-    .then(([[ideas], [[{ total }]]]) => {
+    .then(([[ideas], [totalResult]]) => {
+      const total = totalResult[0]?.total ?? 0;
       if (total > 0) {
-        models.ideaCoauthor
-          .find(ideas, true)
+        models.author
+          .find(
+            ideas.map((idea) => idea.id_idea),
+            true
+          )
           .then((authorsResults) => {
             const authors = authorsResults[0] ? authorsResults[0] : [];
             res.json({ ideas, total, authors });
-                 
           })
           .catch((err) => {
-            console.warn("ideaController:model.ideaCoauthor.find: ", err);
+            console.error(err);
             res.sendStatus(500);
           });
       } else {
         res.json({
           ideas: [],
           total: 0,
-          coauthors: [],
-          users: [],
-          categories: [],
+          authors: [],
         });
       }
     })
     .catch((err) => {
-      console.warn("ideaController:model.idea.findAll: ", err);
-      res.sendStatus(500);
-    });
-};
-
-const note = (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const noted = parseInt(req.body.note, 10);
-  models.idea
-    .find(id)
-    .then(([results]) => {
-      if (results === null) {
-        res.sendStatus(404);
-      } else {
-        const noted_by = results[0].noted_by ?? "";
-        const total = parseInt(results[0].note, 10) + noted;
-        let voters = noted_by.split(",");
-        if (!voters.includes(req.payload.sub.toString())) {
-          voters.push(req.payload.sub);
-          const update = [
-            {
-              param: "note",
-              value: total,
-            },
-            {
-              param: "noted_by",
-              value: voters.join(","),
-            },
-          ];
-          console.log(update);
-          models.idea
-            .update(id, update)
-            .then(([result]) => {
-              if (result.affectedRows === 0) {
-                res.sendStatus(404);
-              } else {
-                res.sendStatus(204);
-              }
-            })
-            .catch((err) => {
-              console.error(err);
-              res.sendStatus(500);
-            });
-        }
-      }
-    })
-    .catch((err) => {
-      console.warn("ideaController:note:model.idea.find: ", err);
+      console.error(err);
       res.sendStatus(500);
     });
 };
@@ -223,54 +185,47 @@ const read = (req, res) => {
   const start = new Date();
   const id = parseInt(req.params.id, 10);
   models.idea
-    .find(id)
+    .find(id, req.payload)
     .then(([results]) => {
       if (results === null) {
         res.sendStatus(404);
       } else {
         const idea = { id, ...results[0] };
-        models.comment
-          .getLastsCommentsOfAnIdeaById(idea.id_user)
-          .then((commentsResults) => {
+        Promise.all([
+          models.comment.getLastsCommentsOfAnIdeaById(id),
+          models.author.find([id]),
+          models.asset.findByIdea(id),
+        ])
+          .then(([commentsResults, authorsResults, assetsResults]) => {
             const comments = [
-              commentsResults[0] !== null ? commentsResults[0][0] : [],
-              commentsResults[1] !== null ? commentsResults[1][0] : [],
-              commentsResults[2] !== null ? commentsResults[2][0] : [],
-              commentsResults[3] !== null ? commentsResults[3][0] : [],
+              {
+                comments:
+                  commentsResults[0] !== null ? commentsResults[0][0] : [],
+                total: -1,
+              },
+              {
+                comments:
+                  commentsResults[1] !== null ? commentsResults[1][0] : [],
+                total: commentsResults[2][0][0].total,
+              },
+              {
+                comments:
+                  commentsResults[3] !== null ? commentsResults[3][0] : [],
+                total: commentsResults[4][0][0].total,
+              },
+              {
+                comments:
+                  commentsResults[5] !== null ? commentsResults[5][0] : [],
+                total: commentsResults[6][0][0].total,
+              },
             ];
-            models.author
-              .find([idea.id_idea])
-              .then((authorsResults) => {
-                const authors =
-                  authorsResults[0] != null ? authorsResults[0] : [];
-                models.user
-                  .getUsersFromIds(ideas, authors, comments)
-                  .then(([users]) => {
-                    console.info(
-                      "Durée de traitement:  %dms",
-                      new Date() - start
-                    );
-                    
-                    res.json({ idea, coauthors, users, comments });
-                  })
-                  .catch((err) => {
-                    console.warn(
-                      "ideaController:model.user.getUsersFromIdeasAndCoauthorsAndComments: ",
-                      err
-                    );
-                    res.sendStatus(500);
-                  });
-              })
-              .catch((err) => {
-                console.warn("ideaController:model.ideaCoauthor.find: ", err);
-                res.sendStatus(500);
-              });
+            const authors = authorsResults[0] != null ? authorsResults[0] : [];
+            const assets = assetsResults[0] != null ? assetsResults[0] : [];
+            console.info("Durée de traitement:  %dms", new Date() - start);
+            res.json({ idea, authors, comments, assets });
           })
           .catch((err) => {
-            console.error(
-              "ideaControllers:model.comment.getFirstsCommentsOfAnIdeaById: ",
-              err
-            );
+            console.error(err);
             res.sendStatus(500);
           });
       }
@@ -281,10 +236,78 @@ const read = (req, res) => {
     });
 };
 
+const checkAssets = async (req, id) => {
+  if (req.body.assets.length) await models.asset.setIdIdea(req.body.assets, id);
+  models.asset.findByIdea(id).then(([assets]) => {
+    assets
+      .filter((asset) => req.body.assets.includes(asset.id_asset))
+      .forEach((asset) => {
+        const ideaPath = `uploads/idea_${id}`;
+        if (!fs.existsSync(ideaPath)) {
+          fs.mkdirSync(ideaPath, true);
+        }
+        const fileName = path.parse(asset.file_name);
+        const originalFile = `uploads/idea_undefined/${fileName.name}`;
+        const newPath = `${ideaPath}/${fileName.name}`;
+        if (fs.existsSync(`${originalFile}${fileName.ext}`))
+          fs.renameSync(
+            `${originalFile}${fileName.ext}`,
+            `${newPath}${fileName.ext}`
+          );
+        if (asset.type.includes("image")) {
+          if (fs.existsSync(`${originalFile}-150${fileName.ext}`))
+            fs.renameSync(
+              `${originalFile}-150${fileName.ext}`,
+              `${newPath}-150${fileName.ext}`
+            );
+          if (fs.existsSync(`${originalFile}-300${fileName.ext}`))
+            fs.renameSync(
+              `${originalFile}-300${fileName.ext}`,
+              `${newPath}-300${fileName.ext}`
+            );
+          if (fs.existsSync(`${originalFile}-800${fileName.ext}`))
+            fs.renameSync(
+              `${originalFile}-800${fileName.ext}`,
+              `${newPath}-800${fileName.ext}`
+            );
+          if (fs.existsSync(`${originalFile}-1080${fileName.ext}`))
+            fs.renameSync(
+              `${originalFile}-1080${fileName.ext}`,
+              `${newPath}-1080${fileName.ext}`
+            );
+        }
+      });
+    const update = [
+      {
+        param: "problem",
+        value: req.body.problem.replace(/\/idea_undefined\//g, `/idea_${id}/`),
+      },
+      {
+        param: "solution",
+        value: req.body.solution.replace(/\/idea_undefined\//g, `/idea_${id}/`),
+      },
+      {
+        param: "gains",
+        value: req.body.gains.replace(/\/idea_undefined\//g, `/idea_${id}/`),
+      },
+    ];
+    models.idea.update(id, update);
+  });
+};
+
 const edit = (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const status = parseInt(req.body.status, 10);
+    const authors = [{ isAuthor: true, idUser: req.payload.sub }];
+    if (req.body.assets && (req.body.status === 0 || req.body.status === 4)) {
+      checkAssets(req, id);
+    }
+    if (req.body.coauthors && req.body.coauthors.length) {
+      req.body.coauthors.forEach((coauthor) => {
+        authors.push({ isAuthor: false, idUser: coauthor });
+      });
+    }
     const update = [];
     if (req.body.name) {
       update.push({
@@ -292,28 +315,28 @@ const edit = (req, res) => {
         value: req.body.name,
       });
     }
-    if (req.body.description) {
+    if (req.body.description !== undefined) {
       update.push({
         param: "description",
         value: req.body.description,
       });
     }
-    if (req.body.problem) {
+    if (req.body.problem !== undefined) {
       update.push({
         param: "problem",
-        value: req.body.problem,
+        value: req.body.problem.replace(/\/idea_undefined\//g, `/idea_${id}/`),
       });
     }
-    if (req.body.solution) {
+    if (req.body.solution !== undefined) {
       update.push({
         param: "solution",
-        value: req.body.solution,
+        value: req.body.solution.replace(/\/idea_undefined\//g, `/idea_${id}/`),
       });
     }
     if (req.body.gains) {
       update.push({
         param: "gains",
-        value: req.body.gains,
+        value: req.body.gains.replace(/\/idea_undefined\//g, `/idea_${id}/`),
       });
     }
     if (req.body.finished_at) {
@@ -335,7 +358,6 @@ const edit = (req, res) => {
       });
     }
     if (!Number.isNaN(status)) {
-      console.log(status);
       update.push({
         param: "status",
         value: status,
@@ -345,36 +367,38 @@ const edit = (req, res) => {
       models.ideaCategorie
         .delete(id)
         .then(() => {
+          const categoriesData = [];
+          req.body.categories.forEach((categorie) => {
+            categoriesData.push(categorie);
+            categoriesData.push(id);
+          });
           models.ideaCategorie
-            .add(req.body.categories, id)
+            .add(req.body.categories, categoriesData)
             .then(() => {})
             .catch((err) => {
-              console.warn("ideaControllers:ideaCoauthor: ", err);
+              console.error(err);
               res.sendStatus(500);
             });
         })
         .catch((err) => {
-          console.warn("ideaControllers:ideaCategorie: ", err);
+          console.error(err);
           res.sendStatus(500);
         });
     }
     if (req.body.coauthors) {
-      models.ideaCoauthor
+      models.author
         .delete(id)
         .then(() => {
-          models.ideaCoauthor
-            .add(
-              req.body.coauthors.split(",").filter((c) => c != "" && c != ","),
-              id
-            )
+          models.author
+            .add(authors, id)
             .then(() => {})
             .catch((err) => {
-              console.warn("ideaControllers:ideaCoauthor: ", err);
+              console.error(err);
               res.sendStatus(500);
             });
         })
         .catch((err) => {
-          console.warn("ideaControllers:ideaCategorie: ", err);
+          console.error(err);
           res.sendStatus(500);
         });
     }
@@ -401,43 +425,66 @@ const edit = (req, res) => {
   }
 };
 
-/*  req.body = {
-      name,
-      description,
-      problem,
-      solution,
-      gains,
-      finished_at,
-      status,
-      user_id,
-      organisation_id,
-      categories
-    }
-*/
 const add = (req, res) => {
   const idea = req.body;
   idea.user_id = req.payload.sub;
-  idea.organisation_id = req.payload.organisation;
-  idea.status = models.idea
+  idea.id_organisation = req.payload.organisation;
+  const authors = [{ isAuthor: true, idUser: req.payload.sub }];
+  if (req.body.coauthors && req.body.coauthors.length) {
+    req.body.coauthors.forEach((coauthor) => {
+      authors.push({ isAuthor: false, idUser: coauthor });
+    });
+  }
+  idea.status = parseInt(req.body.status, 10) === 1 ? 1 : 0;
+  models.idea
     .insert(idea)
     .then(([result]) => {
       const id = result.insertId;
-      models.ideaCategorie
-        .add(req.body.categories, id)
-        .then(() => {
-          if (req.body.coauthors && req.body.coauthors.length) {
-            models.ideaCoauthor
-              .add(req.body.coauthors, id)
-              .then(() => {
-                console.log(id);
-                res.status(201).json({ id });
-              })
-              .catch((err) => {
-                console.error(err);
-                res.sendStatus(500);
-              });
+      if (req.body.assets) {
+        checkAssets(req, id);
+      }
+      const challengeId = parseInt(req.body.challenge, 10);
+
+      if (req.body.challenge && !Number.isNaN(challengeId))
+        models.challenger.insert(id, challengeId);
+
+      const categoriesData = [];
+      for (let i = 0; i < req.body.categories.length; i += 1) {
+        categoriesData.push(req.body.categories[i]);
+        categoriesData.push(id);
+      }
+      models.ideaCategorie.add(req.body.categories, categoriesData);
+      models.author.add(authors, id).then(() => {
+        res.status(201).json({ id });
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      res.sendStatus(500);
+    });
+};
+
+const destroy = (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  models.asset
+    .findToDelete([req.params.id_idea])
+    .then(([results]) => {
+      if (results.length) {
+        models.asset
+          .deleteIds(results.map((asset) => asset.id_asset))
+          .then(([assets]) => {
+            if (assets.affectedRows) {
+              fs.rmSync(`uploads/idea_${id}`, { recursive: true, force: true });
+            }
+          });
+      }
+      models.idea
+        .delete(id)
+        .then(([result]) => {
+          if (result.affectedRows === 0) {
+            res.sendStatus(404);
           } else {
-            res.status(201).json({ id });
+            res.sendStatus(204);
           }
         })
         .catch((err) => {
@@ -451,16 +498,36 @@ const add = (req, res) => {
     });
 };
 
-const destroy = (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  models.idea
-    .delete(id)
-    .then(([result]) => {
-      if (result.affectedRows === 0) {
-        res.sendStatus(404);
-      } else {
-        res.sendStatus(204);
+const batchDestroy = (req, res) => {
+  const ids = req.query.ids.split(",").filter((id) => !Number.isNaN(id));
+  models.asset
+    .findToDelete(ids)
+    .then(([results]) => {
+      if (results.length) {
+        models.asset
+          .deleteIds(results.map((asset) => asset.id_asset))
+          .then(() => {
+            ids.forEach((id) =>
+              fs.rmSync(`uploads/idea_${id}`, { recursive: true, force: true })
+            );
+          })
+          .catch((err) => {
+            console.error(err);
+          });
       }
+      models.idea
+        .deleteIds(ids)
+        .then(([result]) => {
+          if (result.affectedRows === 0) {
+            res.sendStatus(404);
+          } else {
+            res.sendStatus(204);
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          res.sendStatus(500);
+        });
     })
     .catch((err) => {
       console.error(err);
@@ -474,5 +541,5 @@ module.exports = {
   edit,
   add,
   destroy,
-  note,
+  batchDestroy,
 };
