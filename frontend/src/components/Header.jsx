@@ -4,8 +4,10 @@ import PropTypes from "prop-types";
 import logoSncfWhite from "@assets/LOGO_SNCF_GROUPE_NOIR_small.heif";
 import logoSncf from "@assets/LOGO_SNCF_GROUPE_RVB_small.heif";
 import logoSncfDark from "@assets/LOGO_SNCF_GROUPE_DEFONCE_small.heif";
-import logoIrene from "@assets/logo.heif";
-import logoIreneDark from "@assets/logo_dark.heif";
+import logoIreneOff from "@assets/logo.heif";
+import logoIreneOn from "@assets/logo_on.heif";
+import logoIreneDarkOff from "@assets/logo_dark_off.heif";
+import logoIreneDarkOn from "@assets/logo_dark_on.heif";
 import SharedContext from "../contexts/sharedContext";
 
 export default function Header({ setDarkMode, setUser, setIsLogged }) {
@@ -14,8 +16,8 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
     document.querySelector(".menu").classList.toggle("showed");
   };
   const [menuHover, setMenuHover] = useState(0);
-  const { darkMode, user, customFetch, setIsLoading } =
-    useContext(SharedContext);
+  const [isLogoHover, setIsLogoHover] = useState(false);
+  const { darkMode, user, customFetch, setIsLoading } = useContext(SharedContext);
   const location = useLocation();
   const navigate = useNavigate();
   let buttonsColor = darkMode === 0 ? "bg-cyan" : "bg-secondary";
@@ -92,9 +94,11 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
             to={`${import.meta.env.VITE_FRONTEND_URI}/`}
             onClick={handleLinkClick}
             className="btn-unstyled"
+            onMouseEnter={() => setIsLogoHover(true)}
+            onMouseLeave={() => setIsLogoHover(false)}
           >
             <img
-              src={darkMode === 0 ? logoIreneDark : logoIrene}
+              src={darkMode === 0 ? `${isLogoHover ? logoIreneDarkOn : logoIreneDarkOff}` : `${isLogoHover ? logoIreneOn : logoIreneOff}`}
               height="60px"
               alt="IRENE"
               className="ml-sm-5 pl-sm-5 ml-md-0 pl-md-0 pr-3"
