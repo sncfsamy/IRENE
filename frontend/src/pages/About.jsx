@@ -1,17 +1,20 @@
 import { Link } from "react-router-dom";
 import logo from "../assets/logo_irene.heif";
+import { useContext } from "react";
+import SharedContext from "../contexts/sharedContext";
 
 export default function About() {
+  const { darkMode } = useContext(SharedContext);
   return (
-    <div className="container m-5 mx-auto p-3 pt-5 bg-dark text-light text-justify rounded">
-      <Link to={`${import.meta.env.VITE_FRONTEND_URI}`}>
+    <div className={`container m-5 mx-auto p-3 pt-5 bg${darkMode === 2 ? "-gray " : ""}-dark text-light text-justify rounded`}>
+      <Link to={`${import.meta.env.VITE_FRONTEND_URI}/`}>
         <img
           className="img mx-auto d-block vh-10 w-auto"
           src={logo}
           alt="Logo"
         />
       </Link>
-      <h1 className="text-center font-weight-bold mb-5 text-cyan">
+      <h1 className={`text-center font-weight-bold mb-5 text-${darkMode === 0 ? "cyan" : "primary"}`}>
         A propos d'IRENE :
       </h1>
       <p>
@@ -19,7 +22,7 @@ export default function About() {
         d’apporter des évolutions d’une plateforme interne à notre entreprise
         qui aujourd’hui s’appelle Léonard.
       </p>
-      <h2 className="text-cyan">Mais qui est Léonard ?</h2>{" "}
+      <h2 className={`text-${darkMode === 0 ? "cyan" : "primary"}`}>Mais qui est Léonard ?</h2>{" "}
       <p>
         Léonard est né en 2013, c’est une plateforme qui permet de recenser les
         innovations participatives du groupe SNCF. C’est une démarche qui
@@ -49,7 +52,7 @@ export default function About() {
         groupe SNCF ainsi qu’effectuer un recensement des compétences sur la
         base du volontariat.{" "}
       </p>{" "}
-      <h2 className="text-cyan"> Les points forts d'IRENE ? </h2>{" "}
+      <h2 className={`text-${darkMode === 0 ? "cyan" : "primary"}`}> Les points forts d'IRENE ? </h2>{" "}
       <p>
         {" "}
         L’entraide: J’ai une innovation en tête mais je n’ai pas toutes les
@@ -67,7 +70,7 @@ export default function About() {
         L'inscription à la newsletter mensuelle d'IRENE qui m'enverra toutes les
         nouvelles innovations concernant les catégories qui m'intéressent.{" "}
       </p>
-      <h2 className="text-cyan">Agréable visite.</h2>
+      <h2 className={`text-${darkMode === 0 ? "cyan" : "primary"}`}>Agréable visite.</h2>
     </div>
   );
 }

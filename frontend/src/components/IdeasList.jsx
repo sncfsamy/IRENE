@@ -219,77 +219,81 @@ export default function IdeaList({
                     &nbsp;
                   </button>
                   {authors.filter((author) => author.id_idea === idea.id_idea)
-                    .length > 1
-                    ? `${
-                        authors.filter(
-                          (author) => author.id_idea === idea.id_idea
-                        ).length === 2 ? (
-                          <button
-                            type="button"
-                            className="btn btn-link text-break d-block"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              $(".modal").modal("hide");
-                              navigate(
-                                `/user/${
-                                  authors.find(
-                                    (author) =>
-                                      author.id_idea === idea.id_idea &&
-                                      !author.is_author
-                                  ).id_user
-                                }`
-                              );
-                            }}
-                          >
-                            {
-                              authors.find(
-                                (author) =>
-                                  author.id_idea === idea.id_idea &&
-                                  !author.is_author
-                              ).firstname
-                            }{" "}
-                            {
-                              authors.find(
-                                (author) =>
-                                  author.id_idea === idea.id_idea &&
-                                  !author.is_author
-                              ).lastname
-                            }
-                            &nbsp;
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            tabIndex="0"
-                            onClick={(e) => e.preventDefault()}
-                            className={`btn btn-link text-break d-block text-right ${
-                              darkMode === 0 ? "text-warning" : ""
-                            } w-100 pophover`}
-                            data-toggle="popover"
-                            data-trigger="focus"
-                            data-html
-                            data-content={`<ul>${authors
-                              .filter(
-                                (author) =>
-                                  author.id_idea === idea.id_idea &&
-                                  !author.is_author
-                              )
-                              .map(
-                                (author) =>
-                                  `<li>${author.firstname} ${author.lastname}</li>`
-                              )
-                              .join("\r\n")}</ul>`}
-                            title="Co-auteurs:"
-                          >
-                            +
-                            {authors.filter(
-                              (author) => author.id_idea === idea.id_idea
-                            ).length - 1}{" "}
-                            co-auteurs
-                          </button>
-                        )
-                      }`
-                    : ""}
+                    .length == 2 ? (
+                    <button
+                      type="button"
+                      className="btn btn-link text-break d-block"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        $(".modal").modal("hide");
+                        navigate(
+                          `/user/${
+                            authors.find(
+                              (author) =>
+                                author.id_idea === idea.id_idea &&
+                                !author.is_author
+                            ).id_user
+                          }`
+                        );
+                      }}
+                    >
+                      {
+                        authors.find(
+                          (author) =>
+                            author.id_idea === idea.id_idea && !author.is_author
+                        ).firstname
+                      }{" "}
+                      {
+                        authors.find(
+                          (author) =>
+                            author.id_idea === idea.id_idea && !author.is_author
+                        ).lastname
+                      }
+                      &nbsp;
+                    </button>
+                  ) : (
+                    ""
+                  )}
+                  {authors.filter((author) => author.id_idea === idea.id_idea)
+                    .length > 2 ? (
+                    <button
+                      type="button"
+                      tabIndex="0"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        $(".pophover").popover("dispose");
+                      }}
+                      className={`btn btn-link text-break d-block text-right ${
+                        darkMode === 0 ? "text-warning" : ""
+                      } w-100 pophover`}
+                      data-toggle="popover"
+                      data-trigger="focus"
+                      data-html
+                      data-content={`<ul>
+                          ${authors
+                            .filter(
+                              (author) =>
+                                author.id_idea === idea.id_idea &&
+                                !author.is_author
+                            )
+                            .map((author) => (
+                              `<li>
+                                ${author.firstname} ${author.lastname}
+                              </li>`
+                            ))
+                            .join("\r\n")}
+                        </ul>`}
+                      title="Co-auteurs:"
+                    >
+                      +
+                      {authors.filter(
+                        (author) => author.id_idea === idea.id_idea
+                      ).length - 1}{" "}
+                      co-auteurs
+                    </button>
+                  ) : (
+                    ""
+                  )}
                 </div>
               </div>
             </li>

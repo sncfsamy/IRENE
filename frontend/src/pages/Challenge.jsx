@@ -9,7 +9,6 @@ export default function Challenge() {
   const { id } = useParams();
   const { customFetch, setIsLoading, darkMode } = useContext(SharedContext);
   const imageModalRef = useRef(null);
-
   const imgURL = (ideaAsset, size) => {
     const ext = ideaAsset.file_name.substring(
       ideaAsset.file_name.lastIndexOf(".")
@@ -35,7 +34,7 @@ export default function Challenge() {
           if (typeof challengeData.poster === "string") {
             challengeData.poster = JSON.parse(challengeData.poster);
           }
-          if (challengeData.challengers.length) {
+          if (challengeData.challengers && challengeData.challengers.length) {
             challengeData.challengers.forEach((idea) =>
               idea.authors.forEach((author) =>
                 challengeData.authors.push(author)
@@ -45,7 +44,10 @@ export default function Challenge() {
           setChallenge(challengeData);
           setIsLoading(false);
         })
-        .catch(() => setIsLoading(false));
+        .catch((err) => {
+          console.warn(err);
+          setIsLoading(false);
+        });
     }
   }, []);
   return challenge ? (

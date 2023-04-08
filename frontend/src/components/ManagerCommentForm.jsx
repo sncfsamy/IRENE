@@ -37,7 +37,12 @@ ManagerCommentForm.propTypes = {
   id: PropTypes.string.isRequired,
   value: PropTypes.string.isRequired,
   setValue: PropTypes.func,
-  errors: PropTypes.arrayOf(PropTypes.string).isRequired,
+  errors: PropTypes.arrayOf(
+    PropTypes.shape({
+      msg: PropTypes.string,
+      param: PropTypes.string,
+    })
+  ).isRequired,
 };
 ManagerCommentForm.defaultProps = {
   setValue: null,

@@ -14,11 +14,11 @@ const dateOptions = {
 export default function Comment({
   comment,
   id,
+  className,
   field,
   ideaData,
   setIdeaData,
   handleSubmit,
-  style,
   deep,
 }) {
   const { teams, organisations, user, darkMode, setIsLoading, customFetch } =
@@ -46,12 +46,12 @@ export default function Comment({
   };
   return (
     <div
-      style={{ ...style, marginLeft: deep ? `${deep / 1.7}rem` : undefined }}
+      style={{ marginLeft: deep ? `${deep / 1.7}rem` : undefined }}
     >
       <div
         className={`comment-header d-flex flex-row justify-content-between align-items-center rounded-top px-1 px-sm-3 px-lg-4 py-1 py-sm-2 py-lg-3 mt-1 mb-0 mx-0 ${
           darkMode === 0 ? "bg-white" : ""
-        }${darkMode === 1 ? "bg-white" : ""}${darkMode === 2 ? "bg-dark" : ""}`}
+        }${darkMode === 1 ? "bg-white" : ""}${darkMode === 2 ? "bg-dark" : ""} ${className}`}
         style={{ borderColor: `${darkMode === 2 ? "#f2f2f2" : "#d2d2d2"}` }}
       >
         <div>
@@ -94,7 +94,7 @@ export default function Comment({
       <div
         className={`comment-content px-2 px-lg-3 py-1 py-lg-2 my-0 mx-0 ${
           darkMode === 2 ? "bg-gray text-white" : "bg-light"
-        }`}
+        } ${className}`}
         style={{ borderColor: `${darkMode === 2 ? "#f2f2f2" : "#d2d2d2"}` }}
       >
         <p>{comment.comment}</p>
@@ -154,6 +154,7 @@ export default function Comment({
 
 Comment.propTypes = {
   id: PropTypes.string.isRequired,
+  className: PropTypes.string,
   deep: PropTypes.number,
   comment: PropTypes.shape({
     id_comment: PropTypes.number,
@@ -214,13 +215,12 @@ Comment.propTypes = {
   }).isRequired,
   handleSubmit: PropTypes.func,
   setIdeaData: PropTypes.func,
-  style: PropTypes.shape(),
 };
 
 Comment.defaultProps = {
+  className: "",
   handleSubmit: null,
   deep: null,
   comment: null,
   setIdeaData: null,
-  style: {},
 };

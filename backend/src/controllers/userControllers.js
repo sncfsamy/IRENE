@@ -41,7 +41,7 @@ const read = (req, res) => {
             res.send(user);
           })
           .catch((err) => {
-            console.error(err);
+            console.warn(err);
             res.sendStatus(500);
           });
       }
@@ -80,13 +80,13 @@ const me = (req, res) => {
             });
           })
           .catch((err) => {
-            console.error(err);
+            console.warn(err);
             res.sendStatus(500);
           });
       }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
@@ -163,7 +163,7 @@ const edit = (req, res) => {
         }
       })
       .catch((err) => {
-        console.error(err);
+        console.warn(err);
         res.sendStatus(500);
       });
   } else {
@@ -199,7 +199,7 @@ const batchDestroy = (req, res) => {
       }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
@@ -260,21 +260,20 @@ const login = (req, res) => {
         .then((isVerified) => {
           if (isVerified) {
             const now = Math.floor(new Date().getTime() / 1000);
-            const ckEditorUploadtoken = jwt.sign(
-              {
-                sub: user.id_user,
-                iat: Math.floor(new Date().getTime() / 1000),
-                exp: Math.floor(new Date().getTime() / 1000) + 10800,
-              },
-              process.env.JWT_CKEDITOR_UPLOAD_SECRET
-            );
             const token = jwt.sign(
               {
                 sub: user.id_user,
                 team: user.id_team,
                 role: user.id_role,
                 organisation: user.id_organisation,
-                upload_token: ckEditorUploadtoken,
+                upload_token: jwt.sign(
+                  {
+                    sub: user.id_user,
+                    iat: Math.floor(new Date().getTime() / 1000),
+                    exp: Math.floor(new Date().getTime() / 1000) + parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10),
+                  },
+                  process.env.JWT_CKEDITOR_UPLOAD_SECRET
+                ),
                 iat: Math.floor(new Date().getTime() / 1000),
                 exp: now + parseInt(process.env.TOKEN_VALIDITY, 10),
               },
@@ -290,7 +289,7 @@ const login = (req, res) => {
             );
             res
               .cookie("irene_auth", token, {
-                maxAge: process.env.TOKEN_RENEWAL_VALIDITY * 1000,
+                maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
                 httpOnly: true,
                 sameSite: true,
                 secure: false,

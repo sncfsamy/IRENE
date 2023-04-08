@@ -69,7 +69,6 @@ const destroy = (req, res) => {
 };
 
 const upload = (req, res) => {
-  const start = new Date();
   const isChallenge =
     req.body.challenge === "true" || req.get("Challenge") === "true";
   const challengeId =
@@ -119,7 +118,7 @@ const upload = (req, res) => {
                 isChallenge ? -1 : req.params.id_idea,
                 isChallenge ? challengeId : -1
               )
-              .then((assets) => {
+              .then(([assets]) => {
                 if (assets.length) {
                   assets.forEach((asset) => {
                     try {
@@ -183,13 +182,13 @@ const upload = (req, res) => {
                     .toFormat("heif")
                     .toFile(`${ideaPath}/${fileName300}`);
                 if (metadata.width > 800)
-                  image
+                  await image
                     .resize({ height: 800 })
                     .heif({ quality: 90 })
                     .toFormat("heif")
                     .toFile(`${ideaPath}/${fileName800}`);
                 if (metadata.width > 1080)
-                  image
+                  await image
                     .resize({ height: 1080 })
                     .heif({ quality: 90 })
                     .toFormat("heif")
@@ -213,45 +212,42 @@ const upload = (req, res) => {
                   .then(([result]) => {
                     if (result.insertId) {
                       const forCKEditor = req.get("CKEditorUploader");
+                      const urls = {
+                        default: `${
+                          forCKEditor
+                            ? `${process.env.BACKEND_URL}/${ideaPath}/`
+                            : ""
+                        }${fileName}`,
+                      };
+                      if (metadata.width > 150)
+                        urls[150] = `${
+                          forCKEditor
+                            ? `${process.env.BACKEND_URL}/${ideaPath}/`
+                            : ""
+                        }/${fileName150}`;
+                      if (metadata.width > 300)
+                        urls[300] = `${
+                          forCKEditor
+                            ? `${process.env.BACKEND_URL}/${ideaPath}/`
+                            : ""
+                        }/${fileName300}`;
+                      if (metadata.width > 800)
+                        urls[800] = `${
+                          forCKEditor
+                            ? `${process.env.BACKEND_URL}/${ideaPath}/`
+                            : ""
+                        }/${fileName800}`;
+                      if (metadata.width > 1080)
+                        urls[1080] = `${
+                          forCKEditor
+                            ? `${process.env.BACKEND_URL}/${ideaPath}/`
+                            : ""
+                        }${fileName1080}`;
                       resolve({
                         id_asset: result.insertId,
                         size,
                         type: "image/heif",
-                        urls: {
-                          default: `${
-                            forCKEditor
-                              ? `${process.env.BACKEND_URL}/${ideaPath}/`
-                              : ""
-                          }${fileName}`,
-                          150:
-                            metadata.width > 150 &&
-                            `${
-                              forCKEditor
-                                ? `${process.env.BACKEND_URL}/${ideaPath}/`
-                                : ""
-                            }/${fileName150}`,
-                          300:
-                            metadata.width > 300 &&
-                            `${
-                              forCKEditor
-                                ? `${process.env.BACKEND_URL}/${ideaPath}/`
-                                : ""
-                            }/${fileName300}`,
-                          800:
-                            metadata.width > 800 &&
-                            `${
-                              forCKEditor
-                                ? `${process.env.BACKEND_URL}/${ideaPath}/`
-                                : ""
-                            }/${fileName800}`,
-                          1080:
-                            metadata.width > 1080 &&
-                            `${
-                              forCKEditor
-                                ? `${process.env.BACKEND_URL}/${ideaPath}/`
-                                : ""
-                            }${fileName1080}`,
-                        },
+                        urls,
                       });
                     } else {
                       if (fs.existsSync(`${ideaPath}/${fileName}`))
@@ -320,10 +316,6 @@ const upload = (req, res) => {
   Promise.all(runs)
     .then(
       (results) => {
-        console.info(
-          "Durée de traitement du chargement des images:  %dms",
-          new Date() - start
-        );
         res.status(201).json(results.length === 1 ? results[0] : results);
       },
       (errors) => {

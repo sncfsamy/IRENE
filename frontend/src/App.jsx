@@ -198,12 +198,14 @@ function App() {
             setIsLogged(true);
           })
           .catch((error) => {
-            console.error(error);
+            console.warn(error);
             setIsLogged(false);
             setIsLoading(false);
           });
       })
       .catch(() => {
+        console.log("déco")
+        setUser();
         setIsLogged(false);
         setIsLoading(false);
       });
@@ -221,7 +223,6 @@ function App() {
           darkMode,
           setIsLoading,
           isLogged,
-          setIsLogged,
         }}
       >
         <BrowserRouter>
@@ -233,9 +234,10 @@ function App() {
               setTeams={setTeams}
               setRoles={setRoles}
               setCategories={setCategories}
+              setIsLogged={setIsLogged}
             />
           ) : (
-            <UnAuthenticatedApp setRefreshToken={setRefreshToken} />
+            <UnAuthenticatedApp setIsLogged={setIsLogged} setRefreshToken={setRefreshToken} />
           )}
         </BrowserRouter>
         {isLoading ? <Loader /> : ""}

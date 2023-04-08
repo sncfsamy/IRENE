@@ -84,7 +84,7 @@ function Textarea({
           fileRepo.on("change:uploaded", (e, n, v) => {
             const loader = fileRepo.loaders.last;
             loader.on("change:uploadResponse", (e2, n2, value2, ov) => {
-              if (value2 && value.id_asset) {
+              if (value2 && value2.id_asset) {
                 window.assetsToReassign.push(value2.id_asset);
                 setAssetsToReassign(window.assetsToReassign);
               }

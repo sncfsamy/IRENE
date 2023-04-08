@@ -7,25 +7,21 @@ import SharedContext from "../contexts/sharedContext";
 export default function SkillSearch() {
   const { organisations, teams, darkMode, setIsLoading, customFetch } =
     useContext(SharedContext);
+  const [searchTerms, setSearchTerms] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchTerms, setSearchTerms] = useState({ search_terms: "" });
   const [iconHover, setIconHover] = useState();
   const [searchResults, setSearchResults] = useState([]);
-  const handleChange = (e) => {
-    const { id, value } = e.target;
-    setSearchTerms({ [id]: value });
-  };
-
   const hoverIcon = (e) => {
     setIconHover(e.target.dataset.target);
   };
   const search = () => {
     setIsLoading(true);
+    if (!searchParams.has("page")) {
+      searchParams.set("page", 1);
+      setSearchParams(searchParams);
+    }
     customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/skills?${new URLSearchParams({
-        ...searchTerms,
-        page: searchParams.get("page") ?? 1,
-      })}`
+      `${import.meta.env.VITE_BACKEND_URL}/skills?${searchParams}`
     )
       .then((results) => {
         setSearchResults(results);
@@ -44,8 +40,10 @@ export default function SkillSearch() {
   };
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (searchTerms.search_terms.length >= 3) {
-      search();
+    if (searchTerms.length >= 3) {
+      searchParams.set("search_terms", searchTerms)
+      if (!searchParams.has("page")) searchParams.set("page", 1);
+      setSearchParams(searchParams);
     } else {
       setIsLoading(false);
       setSearchResults();
@@ -53,7 +51,7 @@ export default function SkillSearch() {
   };
   useEffect(() => setIsLoading(false), []);
   useEffect(() => {
-    if (searchTerms.search_terms.length >= 3) {
+    if (searchParams.has("search_terms") && searchParams.get("search_terms").length >= 3) {
       search();
     }
   }, [searchParams.get("page")]);
@@ -97,8 +95,8 @@ export default function SkillSearch() {
                   className="form-control"
                   id="search_terms"
                   placeholder="Compétence recherchée"
-                  onChange={handleChange}
-                  value={searchTerms.search_terms}
+                  onChange={(e) => setSearchTerms(e.target.value)}
+                  value={searchTerms || (searchParams.has("search_terms") && searchParams.get("search_terms")) || ""}
                 />
               </div>
               <div className="input-group-append">

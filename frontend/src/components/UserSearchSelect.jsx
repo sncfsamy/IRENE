@@ -8,11 +8,13 @@ export default function UserSearchSelect({ users, setUsers, label }) {
   const [selectedUsers, setSelectedUsers] = useState([]); // utilisateurs sélectionnés pour le filtrage
   const [searchUserValue, setSearchUserValue] = useState(""); // valeur pour recherche utilisateur
   useEffect(() => {
-    if (
+    if (!users.length) {
+      setSelectedUsers([]);
+    } else if (users[0] && typeof users[0] === "number" &&
       selectedUsers.find(
         (uf) =>
           !users.includes(uf.id_user) &&
-          !users.find((user) => user.id_user === uf.id_user)
+          !users.find((user) => user && user.id_user === uf.id_user)
       )
     ) {
       customFetch(
@@ -22,10 +24,10 @@ export default function UserSearchSelect({ users, setUsers, label }) {
       )
         .then((usersData) => setSelectedUsers(usersData))
         .catch();
-    } else {
-      const newSelectedUsers = [...selectedUsers];
+    } else if (users[0] && typeof users[0] !== "number"){
+      const newSelectedUsers = [];
       users.forEach((user) => {
-        if (user.id_user) {
+        if (user && user.id_user) {
           newSelectedUsers.push(user);
         }
       });
@@ -214,7 +216,16 @@ export default function UserSearchSelect({ users, setUsers, label }) {
 UserSearchSelect.propTypes = {
   label: PropTypes.string,
   setUsers: PropTypes.func,
-  users: PropTypes.arrayOf(PropTypes.number),
+  users: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.number,
+      PropTypes.shape({
+        id_user: PropTypes.number,
+        firstname: PropTypes.string,
+        lastname: PropTypes.string,
+      }),
+    ])
+  ),
 };
 UserSearchSelect.defaultProps = {
   label: "",

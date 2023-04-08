@@ -1,13 +1,13 @@
 import { Route, Routes } from "react-router-dom";
 import { PropTypes } from "prop-types";
-import Error403 from "@pages/Error403";
 import Authentification from "../pages/Authentification";
 import About from "../pages/About";
+import Error403 from "@pages/Error403";
 
 export default function UnAuthenticatedApp({
   setRefreshToken,
   isLogged,
-  user,
+  setIsLogged,
   isLoading,
 }) {
   const authenticatedRoutes = [
@@ -28,32 +28,22 @@ export default function UnAuthenticatedApp({
         path={`${import.meta.env.VITE_FRONTEND_URI}/about`}
         element={<About />}
       />
-      {isLogged && user
-        ? authenticatedRoutes.map((route) => (
-            <Route key={route} path={route} element={<Error403 />} />
-          ))
-        : ""}
-      {!isLogged && !isLoading ? (
-        <Route
-          path="*"
-          element={<Authentification setRefreshToken={setRefreshToken} />}
-        />
-      ) : (
-        ""
-      )}
+      <Route
+        path={`${import.meta.env.VITE_FRONTEND_URI}*`}
+        element={<Authentification setIsLogged={setIsLogged} setRefreshToken={setRefreshToken} />}
+      />
     </Routes>
   );
 }
 
 UnAuthenticatedApp.propTypes = {
-  setRefreshToken: PropTypes.func,
+  setRefreshToken: PropTypes.func.isRequired,
   user: PropTypes.shape({}),
   isLogged: PropTypes.bool,
   isLoading: PropTypes.bool,
 };
 UnAuthenticatedApp.defaultProps = {
-  setRefreshToken: null,
-  user: null,
   isLogged: false,
   isLoading: true,
+  user: null,
 };

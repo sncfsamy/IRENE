@@ -33,6 +33,18 @@ body {
   border: solid;
   border-width: 0.1rem 0.1rem 0.1rem !important;
 }
+div.bg-light.last-comment,
+div.bg-white.last-comment,
+div.bg-dark.last-comment,
+div.bg-gray.last-comment {
+  animation: blink-last-comment 10s;
+}
+
+@keyframes blink-last-comment { 
+  10% { 
+    color:rgb(3, 143, 61);
+  }
+}
 
 /* input type file for upload */
 .custom-file-input ~ .custom-file-label::after {
@@ -57,6 +69,7 @@ body {
 }
 
 .display-1,
+.popover-header,
 .btn-link,
 a {
   color: var(--linksColor);

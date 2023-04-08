@@ -1,6 +1,5 @@
 import { useState, useContext, useRef } from "react";
 import { PropTypes } from "prop-types";
-import useColorChange from "use-color-change";
 import CommentForm from "./CommentForm";
 import Comment from "./Comment";
 import SharedContext from "../contexts/sharedContext";
@@ -41,14 +40,6 @@ export default function Comments({
         setIsLoading(false);
       });
   };
-  const addedComment = useColorChange(
-    ideaData.comments[field].comments.length,
-    {
-      higher: "#26e026",
-      lower: "crimson",
-      duration: 5000,
-    }
-  );
   return (
     <div className="p-3" ref={elementRef}>
       <h2>{label}</h2>
@@ -85,15 +76,15 @@ export default function Comments({
                     comment={comment}
                     field={field}
                     ideaData={ideaData}
-                    style={
+                    className={
                       i === 0 &&
                       comment.id_user === user.id_user &&
                       (new Date(Date.now()).getTime() -
                         new Date(comment.created_at)) /
                         1000 <
                         10
-                        ? addedComment
-                        : {}
+                        ? "last-comment"
+                        : ""
                     }
                     setIdeaData={setIdeaData}
                     setFormShowed={setFormShowed}
@@ -118,7 +109,6 @@ export default function Comments({
               id={`${id}_${field}`}
               handleSubmit={(...arg) => {
                 handleSubmit(...arg);
-                elementRef.current.scrollIntoView({ behavior: "smooth" });
               }}
               buttonText="Envoyer votre contribution"
             />

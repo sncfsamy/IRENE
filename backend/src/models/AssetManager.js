@@ -4,7 +4,17 @@ class AssetManager extends AbstractManager {
   constructor() {
     super({ table: "asset", id: "id_asset" });
   }
-
+  getCount() {
+    return this.database.query(
+      `SELECT COUNT(*) AS total FROM ${this.table}`
+    );
+  }
+  findAll(page) {
+    return this.database.query(
+      `SELECT id_asset,file_name,id_idea,id_challenge,type FROM ${this.table} LIMIT 100 OFFSET ?`,
+      [((page-1)*100)]
+    );
+  }
   findPoster(idIdea, idChallenge = -1) {
     return this.database.query(
       `SELECT file_name,id_asset FROM ${this.table} WHERE (id_idea = ? OR id_challenge = ?) AND field = 0`,
@@ -28,7 +38,7 @@ class AssetManager extends AbstractManager {
 
   findToDelete(ids) {
     return this.database.query(
-      `SELECT file_name,id_asset FROM ${
+      `SELECT file_name,${this.id} FROM ${
         this.table
       } WHERE id_idea IN (${ids.join(",")})`
     );
@@ -43,7 +53,7 @@ class AssetManager extends AbstractManager {
 
   setIdIdea(assetsIds, idIdea) {
     return this.database.query(
-      `UPDATE ${this.table} SET id_idea = ? WHERE id_asset IN (${assetsIds.join(
+      `UPDATE ${this.table} SET id_idea = ? WHERE ${this.id} IN (${assetsIds.join(
         ","
       )}) AND id_idea IS NULL`,
       [idIdea]
@@ -54,7 +64,7 @@ class AssetManager extends AbstractManager {
     return this.database.query(
       `UPDATE ${
         this.table
-      } SET id_comment = ? WHERE id_asset IN (${assetsIds.join(
+      } SET id_comment = ? WHERE ${this.id} IN (${assetsIds.join(
         ","
       )}) AND id_comment IS NULL`,
       [idComment]
@@ -65,7 +75,7 @@ class AssetManager extends AbstractManager {
     return this.database.query(
       `UPDATE ${
         this.table
-      } SET id_challenge = ? WHERE id_asset IN (${assetsIds.join(
+      } SET id_challenge = ? WHERE ${this.id} IN (${assetsIds.join(
         ","
       )}) AND id_challenge IS NULL`,
       [idChallenge]

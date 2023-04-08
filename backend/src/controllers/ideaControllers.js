@@ -136,14 +136,6 @@ const browse = async (req, res) => {
     });
   }
 
-  if (!req.perms.manage_ideas_all && !req.perms.manage_all) {
-    searchFilters.push({
-      column: "i.status",
-      value: "1,2,3,5",
-      operator: "IN",
-    });
-  }
-
   if (req.query.order) {
     orderParams.push({
       column: orderingColumns[parseInt(req.query.order_by ?? 0, 10)],
@@ -164,7 +156,7 @@ const browse = async (req, res) => {
             res.json({ ideas, total, authors });
           })
           .catch((err) => {
-            console.error(err);
+            console.warn(err);
             res.sendStatus(500);
           });
       } else {
@@ -176,13 +168,12 @@ const browse = async (req, res) => {
       }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
 
 const read = (req, res) => {
-  const start = new Date();
   const id = parseInt(req.params.id, 10);
   models.idea
     .find(id, req.payload)
@@ -221,17 +212,16 @@ const read = (req, res) => {
             ];
             const authors = authorsResults[0] != null ? authorsResults[0] : [];
             const assets = assetsResults[0] != null ? assetsResults[0] : [];
-            console.info("Durée de traitement:  %dms", new Date() - start);
             res.json({ idea, authors, comments, assets });
           })
           .catch((err) => {
-            console.error(err);
+            console.warn(err);
             res.sendStatus(500);
           });
       }
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
@@ -304,9 +294,14 @@ const edit = (req, res) => {
       checkAssets(req, id);
     }
     if (req.body.coauthors && req.body.coauthors.length) {
-      req.body.coauthors.forEach((coauthor) => {
-        authors.push({ isAuthor: false, idUser: coauthor });
-      });
+      req.body.coauthors
+        .filter((coauthor) => coauthor !== null)
+        .map((coauthor) =>
+          typeof coauthor === "number" ? coauthor : coauthor.id_user
+        )
+        .forEach((coauthor) => {
+          authors.push({ isAuthor: false, idUser: coauthor });
+        });
     }
     const update = [];
     if (req.body.name) {
@@ -376,12 +371,12 @@ const edit = (req, res) => {
             .add(req.body.categories, categoriesData)
             .then(() => {})
             .catch((err) => {
-              console.error(err);
+              console.warn(err);
               res.sendStatus(500);
             });
         })
         .catch((err) => {
-          console.error(err);
+          console.warn(err);
           res.sendStatus(500);
         });
     }
@@ -393,12 +388,12 @@ const edit = (req, res) => {
             .add(authors, id)
             .then(() => {})
             .catch((err) => {
-              console.error(err);
+              console.warn(err);
               res.sendStatus(500);
             });
         })
         .catch((err) => {
-          console.error(err);
+          console.warn(err);
           res.sendStatus(500);
         });
     }
@@ -413,14 +408,14 @@ const edit = (req, res) => {
           }
         })
         .catch((err) => {
-          console.error(err);
+          console.warn(err);
           res.sendStatus(500);
         });
     } else {
       res.sendStatus(204);
     }
   } catch (err) {
-    console.error(err);
+    console.warn(err);
     res.sendStatus(500);
   }
 };
@@ -431,9 +426,14 @@ const add = (req, res) => {
   idea.id_organisation = req.payload.organisation;
   const authors = [{ isAuthor: true, idUser: req.payload.sub }];
   if (req.body.coauthors && req.body.coauthors.length) {
-    req.body.coauthors.forEach((coauthor) => {
-      authors.push({ isAuthor: false, idUser: coauthor });
-    });
+    req.body.coauthors
+      .filter((coauthor) => coauthor !== null)
+      .map((coauthor) =>
+        typeof coauthor === "number" ? coauthor : coauthor.id_user
+      )
+      .forEach((coauthor) => {
+        authors.push({ isAuthor: false, idUser: coauthor });
+      });
   }
   idea.status = parseInt(req.body.status, 10) === 1 ? 1 : 0;
   models.idea
@@ -459,7 +459,7 @@ const add = (req, res) => {
       });
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
@@ -467,7 +467,7 @@ const add = (req, res) => {
 const destroy = (req, res) => {
   const id = parseInt(req.params.id, 10);
   models.asset
-    .findToDelete([req.params.id_idea])
+    .findToDelete([id])
     .then(([results]) => {
       if (results.length) {
         models.asset
@@ -488,12 +488,12 @@ const destroy = (req, res) => {
           }
         })
         .catch((err) => {
-          console.error(err);
+          console.warn(err);
           res.sendStatus(500);
         });
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };
@@ -512,7 +512,7 @@ const batchDestroy = (req, res) => {
             );
           })
           .catch((err) => {
-            console.error(err);
+            console.warn(err);
           });
       }
       models.idea
@@ -525,12 +525,12 @@ const batchDestroy = (req, res) => {
           }
         })
         .catch((err) => {
-          console.error(err);
+          console.warn(err);
           res.sendStatus(500);
         });
     })
     .catch((err) => {
-      console.error(err);
+      console.warn(err);
       res.sendStatus(500);
     });
 };

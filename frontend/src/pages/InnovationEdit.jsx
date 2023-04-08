@@ -8,8 +8,7 @@ import sharedContext from "../contexts/sharedContext";
 import Textarea from "../components/forms/Textarea";
 
 function InnovationEdit() {
-  const [errorField, setErrorField] = useState();
-  const [idea, setIdea] = useState({
+  const defaultIdea = {
     name: "",
     description: "",
     problem: "",
@@ -18,11 +17,14 @@ function InnovationEdit() {
     status: 0,
     categories: [],
     coauthors: [],
-  });
+  };
+  const [errorField, setErrorField] = useState();
+  const [idea, setIdea] = useState(defaultIdea);
   const { darkMode, setIsLoading, categories, user, customFetch } =
     useContext(sharedContext);
   const [authorId, setAuthorId] = useState(user.id_user);
   const [assetsToReassign, setAssetsToReassign] = useState([]);
+  const [assetsToReassignFromEditor, setAssetsToReassignFromEditor] = useState([]);
   const [ideaAssets, setIdeaAssets] = useState([]);
   const [problem, setProblem] = useState("");
   const [solution, setSolution] = useState("");
@@ -39,7 +41,6 @@ function InnovationEdit() {
   let { id } = useParams();
 
   const navigate = useNavigate();
-
   const handleCheck = (event) => {
     let updatedList = [...idea.categories];
     const value = parseInt(event.target.dataset.id, 10);
@@ -112,7 +113,7 @@ function InnovationEdit() {
         ...newIdea,
         finished_at: finished,
         status,
-        assets: assetsToReassign,
+        assets: [...assetsToReassign, ...assetsToReassignFromEditor],
       })
         .then((response) => {
           if (response.errors) {
@@ -130,7 +131,7 @@ function InnovationEdit() {
         ...newIdea,
         finished_at: finished,
         status,
-        assets: assetsToReassign,
+        assets: [...assetsToReassign, ...assetsToReassignFromEditor],
         challenge,
       })
         .then((response) => {
@@ -161,15 +162,14 @@ function InnovationEdit() {
           user.id_organisation === idea.id_organisation))
     ) {
       customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`, "DELETE")
-        .then((response) => {
-          setErrorField(response.errors);
-          setIdea({ ...idea, status: 0 });
+        .then(() => {
           setIsLoading(false);
+          navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
         })
         .catch((error) => {
-          navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
           console.error(error);
           setIsLoading(false);
+          navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
         });
     }
   };
@@ -186,7 +186,7 @@ function InnovationEdit() {
           if (!author || author.id_user !== user.id_user) {
             navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
           } else {
-            finished = dataIdea.idea.status > 0;
+            finished = dataIdea.idea.status !== 0 && dataIdea.idea.status != 4;
             setIdea({
               ...dataIdea.idea,
               categories: dataIdea.idea.categories ?? [],
@@ -210,9 +210,16 @@ function InnovationEdit() {
           setIsLoading(false);
         });
     } else {
+      setIdea(defaultIdea);
+      setAuthorId(user.id_user);
+      setIdeaAssets([]);
+      setProblem("");
+      setSolution("");
+      setGains("");
+      setPoster();
       setIsLoading(false);
     }
-  }, []);
+  }, [id]);
 
   const handleChange = (e) => {
     if (e.target.id === "poster") {
@@ -443,7 +450,7 @@ function InnovationEdit() {
             readonly={finished || idea.status > 0}
             useAdvancedEditor
             extraData={{ id_idea: id, field: 1 }}
-            setAssetsToReassign={setAssetsToReassign}
+            setAssetsToReassign={setAssetsToReassignFromEditor}
             errorMessages={
               errorField
                 ? errorField.filter((error) => error.param === "problem")
@@ -451,7 +458,7 @@ function InnovationEdit() {
             }
           />
           <FilesAndUploads
-            field="1"
+            field={1}
             idIdeaAuthor={authorId}
             ideaAssets={ideaAssets}
             setIdeaAssets={setIdeaAssets}
@@ -475,7 +482,7 @@ function InnovationEdit() {
             readonly={finished || idea.status > 0}
             useAdvancedEditor
             extraData={{ id_idea: id, field: 2 }}
-            setAssetsToReassign={setAssetsToReassign}
+            setAssetsToReassign={setAssetsToReassignFromEditor}
             errorMessages={
               errorField
                 ? errorField.filter((error) => error.param === "solution")
@@ -483,7 +490,7 @@ function InnovationEdit() {
             }
           />
           <FilesAndUploads
-            field="2"
+            field={2}
             idIdeaAuthor={authorId}
             ideaAssets={ideaAssets}
             setIdeaAssets={setIdeaAssets}
@@ -507,7 +514,7 @@ function InnovationEdit() {
             readonly={finished || idea.status > 0}
             useAdvancedEditor
             extraData={{ id_idea: id, field: 3 }}
-            setAssetsToReassign={setAssetsToReassign}
+            setAssetsToReassign={setAssetsToReassignFromEditor}
             errorMessages={
               errorField
                 ? errorField.filter((error) => error.param === "gains")
@@ -515,7 +522,7 @@ function InnovationEdit() {
             }
           />
           <FilesAndUploads
-            field="3"
+            field={3}
             idIdeaAuthor={authorId}
             ideaAssets={ideaAssets}
             setIdeaAssets={setIdeaAssets}
@@ -550,7 +557,7 @@ function InnovationEdit() {
           <button
             type="submit"
             className={`btn btn-${darkMode === 0 ? "warning" : "primary"} m-3`}
-            disabled={finished || idea.status > 0}
+            disabled={finished || (idea.status !== 0 && idea.status !== 4)}
           >
             Enregistrer
           </button>
@@ -559,7 +566,7 @@ function InnovationEdit() {
             onClick={finishing}
             id="finished"
             className={`btn btn-${darkMode === 0 ? "warning" : "primary"} m-3`}
-            disabled={finished || idea.status > 0}
+            disabled={finished || (idea.status !== 0 && idea.status !== 4)}
           >
             Enregistrer et finaliser
           </button>

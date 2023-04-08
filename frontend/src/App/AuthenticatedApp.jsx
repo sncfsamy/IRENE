@@ -16,7 +16,7 @@ import Manage from "../pages/Manage";
 export default function AuthenticatedApp({
   setUser,
   setDarkMode,
-  setLogged,
+  setIsLogged,
   setOrganisations,
   setTeams,
   setRoles,
@@ -27,7 +27,7 @@ export default function AuthenticatedApp({
       <Header
         setDarkMode={setDarkMode}
         setUser={setUser}
-        setLogged={setLogged}
+        setIsLogged={setIsLogged}
       />
       <Routes>
         <Route
@@ -99,20 +99,11 @@ export default function AuthenticatedApp({
 }
 
 AuthenticatedApp.propTypes = {
-  setCategories: PropTypes.func,
-  setDarkMode: PropTypes.func,
-  setLogged: PropTypes.func,
-  setOrganisations: PropTypes.func,
-  setRoles: PropTypes.func,
-  setTeams: PropTypes.func,
-  setUser: PropTypes.func,
-};
-AuthenticatedApp.defaultProps = {
-  setCategories: null,
-  setDarkMode: null,
-  setLogged: null,
-  setOrganisations: null,
-  setRoles: null,
-  setTeams: null,
-  setUser: null,
+  setCategories: PropTypes.func.isRequired,
+  setDarkMode: PropTypes.func.isRequired,
+  setIsLogged: PropTypes.func.isRequired,
+  setOrganisations: PropTypes.func.isRequired,
+  setRoles: PropTypes.func.isRequired,
+  setTeams: PropTypes.func.isRequired,
+  setUser: PropTypes.func.isRequired,
 };

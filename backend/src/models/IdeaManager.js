@@ -67,8 +67,9 @@ class IdeaManager extends AbstractManager {
       initialSql +
         (searchFilters.find((sf) => sf.column === "a.id_user")
           ? ` FROM ${this.join.author} AS a JOIN ${this.table} AS i ON i.id_idea = a.id_idea`
-          : ` FROM ${this.table} as i`)
+          : ` FROM  ${this.table} AS i`)
     );
+
     query += `${
       orderParams && orderParams.length
         ? orderParams.reduce(
@@ -78,6 +79,7 @@ class IdeaManager extends AbstractManager {
           )
         : " ORDER BY created_at DESC"
     }`;
+
     return [
       this.database.query(`${query}  LIMIT ? OFFSET ?`, sqlData),
       this.database.query(

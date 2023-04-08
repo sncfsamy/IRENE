@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import logoSncfWhite from "@assets/LOGO_SNCF_GROUPE_NOIR_small.heif";
 import logoSncf from "@assets/LOGO_SNCF_GROUPE_RVB_small.heif";
@@ -8,16 +8,16 @@ import logoIrene from "@assets/logo.heif";
 import logoIreneDark from "@assets/logo_dark.heif";
 import SharedContext from "../contexts/sharedContext";
 
-export default function Header({ setDarkMode, setUser }) {
+export default function Header({ setDarkMode, setUser, setIsLogged }) {
   const handleClick = (e) => {
     e.preventDefault();
     document.querySelector(".menu").classList.toggle("showed");
   };
   const [menuHover, setMenuHover] = useState(0);
-  const { darkMode, user, customFetch, setIsLoading, setIsLogged } =
+  const { darkMode, user, customFetch, setIsLoading } =
     useContext(SharedContext);
   const location = useLocation();
-
+  const navigate = useNavigate();
   let buttonsColor = darkMode === 0 ? "bg-cyan" : "bg-secondary";
   buttonsColor = darkMode === 1 ? "bg-light" : buttonsColor;
   let hoverButtonColor = darkMode === 0 ? "bg-warning" : "bg-cyan";
@@ -28,6 +28,7 @@ export default function Header({ setDarkMode, setUser }) {
       () => {
         setUser();
         setIsLogged(false);
+        navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
       }
     );
   };
@@ -35,9 +36,10 @@ export default function Header({ setDarkMode, setUser }) {
     const href =
       e.target.parentElement.href ?? e.target.parentElement.parentElement.href;
     $(".modal").modal("hide");
-    if (!href.includes(location.pathname)) {
+    if (!href.includes(location.pathname)) 
       setIsLoading(true);
-    }
+    else 
+      setIsLoading(false);
   };
   let backgroundColor = "bg-light";
   if (darkMode > 0) {
@@ -458,10 +460,7 @@ export default function Header({ setDarkMode, setUser }) {
 }
 
 Header.propTypes = {
-  setDarkMode: PropTypes.func,
-  setUser: PropTypes.func,
-};
-Header.defaultProps = {
-  setDarkMode: null,
-  setUser: null,
+  setDarkMode: PropTypes.func.isRequired,
+  setIsLogged: PropTypes.func.isRequired,
+  setUser: PropTypes.func.isRequired,
 };

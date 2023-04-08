@@ -111,7 +111,9 @@ const renewToken = (req, res) => {
         {
           sub: payload.sub,
           iat: Math.floor(new Date().getTime() / 1000),
-          exp: Math.floor(new Date().getTime() / 1000) + 10800,
+          exp:
+            Math.floor(new Date().getTime() / 1000) +
+            parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10),
         },
         process.env.JWT_CKEDITOR_UPLOAD_SECRET
       ),
@@ -120,7 +122,7 @@ const renewToken = (req, res) => {
     };
     const token = jwt.sign(req.payload, process.env.JWT_SECRET);
     res.cookie("irene_auth", token, {
-      maxAge: process.env.TOKEN_RENEWAL_VALIDITY * 1000,
+      maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
       httpOnly: true,
       sameSite: true,
       secure: false,
@@ -151,7 +153,8 @@ const verifyToken = (req, res, next) => {
       req.perms = perms;
       if (req.payload.sub) next();
       else res.sendStatus(403);
-    } catch {
+    } catch (err) {
+      console.info(err);
       res.sendStatus(403);
     }
   } else
@@ -179,8 +182,9 @@ const verifyToken = (req, res, next) => {
             process.env.JWT_REFRESH_EXCHANGE_SECRET + req.cookies.irene_auth
           );
           res.status(400).json({ expired: true, refreshExchangeToken });
-        } else res.status(403).redirect(process.env.FRONTEND_URL);
-      } catch (err2) {
+        } else if (req.originalUrl.includes("/me")) res.sendStatus(403);
+        else res.status(403).redirect(process.env.FRONTEND_URL);
+      } catch {
         if (req.cookies.irene_auth) {
           res
             .cookie("irene_auth", "", {
@@ -192,7 +196,8 @@ const verifyToken = (req, res, next) => {
             })
             .status(401)
             .json({ loggedOut: true });
-        } else res.status(403).redirect(process.env.FRONTEND_URL);
+        }
+        else res.status(403).redirect(process.env.FRONTEND_URL);
       }
     }
 };

@@ -14,8 +14,8 @@ const initialValues = {
   password: "",
 };
 
-export default function Authentification({ setRefreshToken }) {
-  const { setIsLoading, setIsLogged, customFetch } = useContext(SharedContext);
+export default function Authentification({ setRefreshToken, setIsLogged }) {
+  const { setIsLoading, customFetch } = useContext(SharedContext);
   const [inputValue, setInputValue] = useState(initialValues);
   const [error, setError] = useState();
 
@@ -148,8 +148,6 @@ export default function Authentification({ setRefreshToken }) {
 }
 
 Authentification.propTypes = {
-  setRefreshToken: PropTypes.func,
-};
-Authentification.defaultProps = {
-  setRefreshToken: null,
+  setRefreshToken: PropTypes.func.isRequired,
+  setIsLogged: PropTypes.func.isRequired
 };

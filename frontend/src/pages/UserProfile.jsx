@@ -136,13 +136,13 @@ export default function UserProfile() {
     <main className="container">
       <div
         className={`${
-          darkMode === 2 ? "bg-primary" : "bg-white"
+          darkMode === 2 ? "bg-secondary" : "bg-white"
         } w-100 h-100 py-3`}
       >
         {localUser && (
           <section
             className={`row ${darkMode === 0 ? "bg-cyan" : ""} ${
-              darkMode === 1 ? "bg-primary" : ""
+              darkMode === 1 ? "bg-secondary text-white" : ""
             } ${
               darkMode === 2 ? "bg-gray" : ""
             } mx-5 my-4 p-3 justify-content-center align-items-center`}
@@ -182,25 +182,25 @@ export default function UserProfile() {
               style={{ fontSize: "150px" }}
             >
               <i
-                className="icons-circle-account-connected"
+                className="icons-circle-account-connected text-white"
                 aria-hidden="true"
                 alt={`Photo de ${localUser.firstname} ${localUser.lastname}`}
               />
             </div>
             <div className="col m-2 pt-5 pl-0 ml-0 text-left">
               <h1
-                className="font-weight-medium d-none d-sm-block"
+                className="font-weight-medium d-none d-sm-block text-white"
                 style={{ fontSize: "40px" }}
               >
                 {localUser.firstname} {localUser.lastname}
               </h1>
               <h2
-                className="font-weight-medium d-block d-sm-none"
+                className="font-weight-medium d-block d-sm-none text-white"
                 style={{ fontSize: "24px" }}
               >
                 {localUser.firstname} {localUser.lastname}
               </h2>
-              <h2>
+              <h2 className="text-white">
                 {
                   organisations.find(
                     (organisation) =>
@@ -211,8 +211,8 @@ export default function UserProfile() {
                 {teams.find((team) => team.id_team === localUser.id_team).name}
               </h2>
               <br />
-              <h2>Matricule: {localUser.registration_number}</h2>
-              <h2 className="text-break">
+              <h2 className="text-white">Matricule: {localUser.registration_number}</h2>
+              <h2 className="text-break text-white">
                 Mail:{" "}
                 <button
                   className="btn btn-link"
@@ -237,7 +237,7 @@ export default function UserProfile() {
                   localUser.managers.find(
                     (manager) => manager.id_user === user.id_user
                   ) === undefined) && (
-                  <h2>
+                  <h2 className="text-white">
                     Responsable{localUser.managers.length > 1 ? "s" : ""}:{" "}
                     {localUser.managers.map((manager, i) => (
                       <span key={manager.id_user}>

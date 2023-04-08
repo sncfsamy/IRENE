@@ -301,7 +301,7 @@ const validateUpload = [
 const validateLogin = [
   body("registration_number", "Le CP doit être renseigné.")
     .exists()
-    .isLength({ min: 4, max: 8 }),
+    .isLength({ min: 4, max: 50 }),
   terminationFunction,
 ];
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import SharedContext from "../contexts/sharedContext";
 import bgImage from "../assets/idea_default_picture.heif";
 import "../assets/ck-content.css";
@@ -65,6 +65,7 @@ export default function InnovationDisplay() {
   const [managerComment, setManagerComment] = useState("");
   const [managerCommentErrors, setManagerCommentErrors] = useState([]);
   const [perms, setPerms] = useState({});
+  const navigate = useNavigate();
   const [commentsLoaded, setCommentsLoaded] = useState([
     false,
     false,
@@ -101,23 +102,6 @@ export default function InnovationDisplay() {
             response.idea.id_organisation === user.id_organisation,
           isAdmin: user.perms.manage_ideas_all || user.perms.manage_all,
         });
-
-        console.warn(
-          response.comments[0].total,
-          response.comments[0].comments.length
-        );
-        console.warn(
-          response.comments[1].total,
-          response.comments[1].comments.length
-        );
-        console.warn(
-          response.comments[2].total,
-          response.comments[2].comments.length
-        );
-        console.warn(
-          response.comments[3].total,
-          response.comments[3].comments.length
-        );
         setPoster(
           response.assets.find(
             (asset) => asset.field === 0 && !asset.id_comment
@@ -170,6 +154,18 @@ export default function InnovationDisplay() {
         .catch();
     }
   };
+  // From https://linuxhint.com/scroll-to-element-javascript/
+  function Position(obj) {
+    let currenttop = 0;
+    if (obj.offsetParent) {
+      do {
+        currenttop += obj.offsetTop;
+      } while ((obj = obj.offsetParent));
+      return [currenttop];
+    }
+  }
+  //
+
   const handleSubmitComment = (
     comment,
     field,
@@ -210,6 +206,19 @@ export default function InnovationDisplay() {
             resolve();
             setIdeaData(newIdeaData);
             setFormShowed(false);
+            setTimeout(() => {
+              const lastCommentPosition = document.querySelector(
+                ".last-comment"
+              )
+                ? Position(document.querySelector(".last-comment"))
+                : null;
+              if (lastCommentPosition)
+                window.scrollTo({
+                  top: lastCommentPosition - 100,
+                  left: 0,
+                  behavior: "smooth",
+                });
+            }, 250);
           }
         })
         .catch((err) => {
@@ -248,39 +257,61 @@ export default function InnovationDisplay() {
       ) {
         data = { status: 4 };
       }
-      handleSubmitComment(managerComment, 0, () => {}, setManagerCommentErrors)
-        .then(() => {
-          customFetch(
-            `${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`,
-            "PUT",
-            data
-          ).then(() => {
-            if (modalAction.action !== "delete") {
-              const newIdea = ideaData.idea;
-              if (modalAction.action === "validateManager") {
-                newIdea.status = 2;
-                newIdea.manager_validated_at = new Date().getTime() / 1000;
-              } else if (modalAction.action === "validateAmbassador") {
-                newIdea.status = 3;
-                newIdea.ambassador_validated_at = new Date().getTime() / 1000;
-              } else if (modalAction.action === "deepen") {
-                newIdea.status = 4;
-              } else if (modalAction.action === "reject") {
-                newIdea.status = 5;
+      if (managerComment.length > 10) {
+        handleSubmitComment(
+          managerComment,
+          0,
+          () => {},
+          setManagerCommentErrors
+        )
+          .then(() => {
+            customFetch(
+              `${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`,
+              "PUT",
+              data
+            ).then(() => {
+              if (modalAction.action !== "delete") {
+                const newIdea = ideaData.idea;
+                if (modalAction.action === "validateManager") {
+                  newIdea.status = 2;
+                  newIdea.manager_validated_at = new Date().getTime() / 1000;
+                } else if (modalAction.action === "validateAmbassador") {
+                  newIdea.status = 3;
+                  newIdea.ambassador_validated_at = new Date().getTime() / 1000;
+                } else if (modalAction.action === "deepen") {
+                  newIdea.status = 4;
+                } else if (modalAction.action === "reject") {
+                  newIdea.status = 5;
+                }
+                setIdeaData({
+                  ...ideaData,
+                  idea: newIdea,
+                });
+                $(() => {
+                  $(".modal").modal("hide");
+                  $('[data-toggle="popover"]').popover("dispose");
+                  $('[data-toggle="popover"]').popover();
+                });
               }
-              setIdeaData({
-                ...ideaData,
-                idea: newIdea,
-              });
-              $(() => {
-                $('[data-toggle="popover"]').popover("dispose");
-                $('[data-toggle="popover"]').popover();
-              });
-            }
-            setTimeout(setModalAction, 1000, {});
-          });
+              setTimeout(setModalAction, 1000, {});
+            });
+          })
+          .catch();
+      } else {
+        setManagerCommentErrors([
+          {
+            param: "comment",
+            msg: "Votre commentaire doit comporter au moins 10 caractères !",
+          },
+        ]);
+      }
+    } else if (perms.isAdmin || perms.isAmbassador) {
+      customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`, "DELETE")
+        .then(() => {
+          $(".modal").modal("hide");
+          navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
         })
-        .catch();
+        .catch((err) => console.warn(err));
     }
   };
   const handleActionSelect = (e) => {
@@ -695,7 +726,7 @@ export default function InnovationDisplay() {
                         data-toggle="popover"
                         data-trigger="hover"
                         title="Nécessite un approfondissement"
-                        data-content="Une idée peut avoir nécessiter un approfondissement de votre part, ou une expertise d'un tiers (voir le commentaire de la demande d'approfondissement)."
+                        data-content="Une idée peut nécessiter un approfondissement de votre part, ou une expertise d'un tiers (voir le commentaire de la demande d'approfondissement)."
                       >
                         {detailedStatus[4]}
                       </button>
@@ -707,7 +738,7 @@ export default function InnovationDisplay() {
                         data-toggle="popover"
                         data-trigger="hover"
                         title="Refusée:"
-                        data-content="Une idée peut peut être refusée si elle manque de consistance, qu'elle n'est pas pertinente, ou bien qu'une autre innovation a déjà solutionné cette problématique."
+                        data-content="Une idée peut être refusée si elle manque de consistance, qu'elle n'est pas pertinente, ou bien qu'une autre innovation a déjà solutionné cette problématique."
                       >
                         {detailedStatus[5]}
                       </button>
@@ -1136,7 +1167,7 @@ export default function InnovationDisplay() {
                           classNameButton={modalAction.buttonClass}
                           setValue={setManagerComment}
                           value={managerComment}
-                          errorMessages={managerCommentErrors}
+                          errors={managerCommentErrors}
                         />
                       </div>
                     ) : (
@@ -1159,7 +1190,6 @@ export default function InnovationDisplay() {
                         type="button"
                         onClick={handleAction}
                         className={`btn ${modalAction.buttonClass}`}
-                        data-dismiss="modal"
                       >
                         {modalAction.buttonText}
                       </button>
