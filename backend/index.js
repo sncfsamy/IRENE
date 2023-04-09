@@ -15,4 +15,3 @@ app.listen(port, (err) => {
 });
 
 cron.schedule("30 3 * * *", deleteOrphanFiles);
-deleteOrphanFiles();
