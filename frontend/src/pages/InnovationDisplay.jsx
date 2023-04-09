@@ -155,12 +155,14 @@ export default function InnovationDisplay() {
     }
   };
   // From https://linuxhint.com/scroll-to-element-javascript/
-  function Position(obj) {
+  function Position(incObj) {
+    let obj = incObj;
     let currenttop = 0;
     if (obj.offsetParent) {
-      do {
+      while (obj.offsetParent) {
+        obj = obj.offsetParent;
         currenttop += obj.offsetTop;
-      } while ((obj = obj.offsetParent));
+      }
       return [currenttop];
     }
   }

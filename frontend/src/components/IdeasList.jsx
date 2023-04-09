@@ -219,7 +219,7 @@ export default function IdeaList({
                     &nbsp;
                   </button>
                   {authors.filter((author) => author.id_idea === idea.id_idea)
-                    .length == 2 ? (
+                    .length === 2 ? (
                     <button
                       type="button"
                       className="btn btn-link text-break d-block"
@@ -276,11 +276,12 @@ export default function IdeaList({
                                 author.id_idea === idea.id_idea &&
                                 !author.is_author
                             )
-                            .map((author) => (
-                              `<li>
+                            .map(
+                              (author) =>
+                                `<li>
                                 ${author.firstname} ${author.lastname}
                               </li>`
-                            ))
+                            )
                             .join("\r\n")}
                         </ul>`}
                       title="Co-auteurs:"

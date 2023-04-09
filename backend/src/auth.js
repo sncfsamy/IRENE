@@ -196,8 +196,7 @@ const verifyToken = (req, res, next) => {
             })
             .status(401)
             .json({ loggedOut: true });
-        }
-        else res.status(403).redirect(process.env.FRONTEND_URL);
+        } else res.status(403).redirect(process.env.FRONTEND_URL);
       }
     }
 };

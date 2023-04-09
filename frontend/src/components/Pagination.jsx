@@ -68,8 +68,8 @@ export default function Pagination({ searchFilters, setSearchFilters, total }) {
   return (
     <nav role="navigation" className="mt-4" aria-label="Pagination">
       <div className="w-100 text-center">
-        Elements: {total.toLocaleString("en").replace(/,/g, " ")} &nbsp; &nbsp; Pages:{" "}
-        {totalPages.toLocaleString("en").replace(/,/g, " ")}
+        Elements: {total.toLocaleString("en").replace(/,/g, " ")} &nbsp; &nbsp;
+        Pages: {totalPages.toLocaleString("en").replace(/,/g, " ")}
       </div>
       <ul className="pagination justify-content-center">
         <li

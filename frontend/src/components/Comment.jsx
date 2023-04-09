@@ -45,13 +45,13 @@ export default function Comment({
       });
   };
   return (
-    <div
-      style={{ marginLeft: deep ? `${deep / 1.7}rem` : undefined }}
-    >
+    <div style={{ marginLeft: deep ? `${deep / 1.7}rem` : undefined }}>
       <div
         className={`comment-header d-flex flex-row justify-content-between align-items-center rounded-top px-1 px-sm-3 px-lg-4 py-1 py-sm-2 py-lg-3 mt-1 mb-0 mx-0 ${
           darkMode === 0 ? "bg-white" : ""
-        }${darkMode === 1 ? "bg-white" : ""}${darkMode === 2 ? "bg-dark" : ""} ${className}`}
+        }${darkMode === 1 ? "bg-white" : ""}${
+          darkMode === 2 ? "bg-dark" : ""
+        } ${className}`}
         style={{ borderColor: `${darkMode === 2 ? "#f2f2f2" : "#d2d2d2"}` }}
       >
         <div>

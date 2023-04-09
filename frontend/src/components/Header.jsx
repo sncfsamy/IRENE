@@ -17,7 +17,8 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
   };
   const [menuHover, setMenuHover] = useState(0);
   const [isLogoHover, setIsLogoHover] = useState(false);
-  const { darkMode, user, customFetch, setIsLoading } = useContext(SharedContext);
+  const { darkMode, user, customFetch, setIsLoading } =
+    useContext(SharedContext);
   const location = useLocation();
   const navigate = useNavigate();
   let buttonsColor = darkMode === 0 ? "bg-cyan" : "bg-secondary";
@@ -38,10 +39,8 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
     const href =
       e.target.parentElement.href ?? e.target.parentElement.parentElement.href;
     $(".modal").modal("hide");
-    if (!href.includes(location.pathname)) 
-      setIsLoading(true);
-    else 
-      setIsLoading(false);
+    if (!href.includes(location.pathname)) setIsLoading(true);
+    else setIsLoading(false);
   };
   let backgroundColor = "bg-light";
   if (darkMode > 0) {
@@ -98,7 +97,11 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
             onMouseLeave={() => setIsLogoHover(false)}
           >
             <img
-              src={darkMode === 0 ? `${isLogoHover ? logoIreneDarkOn : logoIreneDarkOff}` : `${isLogoHover ? logoIreneOn : logoIreneOff}`}
+              src={
+                darkMode === 0
+                  ? `${isLogoHover ? logoIreneDarkOn : logoIreneDarkOff}`
+                  : `${isLogoHover ? logoIreneOn : logoIreneOff}`
+              }
               height="60px"
               alt="IRENE"
               className="ml-sm-5 pl-sm-5 ml-md-0 pl-md-0 pr-3"

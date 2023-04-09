@@ -24,7 +24,9 @@ function InnovationEdit() {
     useContext(sharedContext);
   const [authorId, setAuthorId] = useState(user.id_user);
   const [assetsToReassign, setAssetsToReassign] = useState([]);
-  const [assetsToReassignFromEditor, setAssetsToReassignFromEditor] = useState([]);
+  const [assetsToReassignFromEditor, setAssetsToReassignFromEditor] = useState(
+    []
+  );
   const [ideaAssets, setIdeaAssets] = useState([]);
   const [problem, setProblem] = useState("");
   const [solution, setSolution] = useState("");
@@ -186,7 +188,7 @@ function InnovationEdit() {
           if (!author || author.id_user !== user.id_user) {
             navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
           } else {
-            finished = dataIdea.idea.status !== 0 && dataIdea.idea.status != 4;
+            finished = dataIdea.idea.status !== 0 && dataIdea.idea.status !== 4;
             setIdea({
               ...dataIdea.idea,
               categories: dataIdea.idea.categories ?? [],

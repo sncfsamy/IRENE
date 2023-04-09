@@ -52,14 +52,19 @@ export default function CommentForm({
             darkMode === 0 ? "btn-warning" : "btn-primary"
           } mx-2 mx-sm-1 my-1 my-sm-2`}
           onClick={() => {
-            if (comment.length<5) {
-              setErrors([{param:"comment",msg:"Votre commentaire doit comporter au moins 5 caractères !"}]);
+            if (comment.length < 5) {
+              setErrors([
+                {
+                  param: "comment",
+                  msg: "Votre commentaire doit comporter au moins 5 caractères !",
+                },
+              ]);
             } else {
               handleSubmit(
                 comment,
                 field,
                 setFormShowed,
-                ()=>{},
+                () => {},
                 idParentComment
               );
             }

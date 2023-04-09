@@ -149,5 +149,5 @@ export default function Authentification({ setRefreshToken, setIsLogged }) {
 
 Authentification.propTypes = {
   setRefreshToken: PropTypes.func.isRequired,
-  setIsLogged: PropTypes.func.isRequired
+  setIsLogged: PropTypes.func.isRequired,
 };

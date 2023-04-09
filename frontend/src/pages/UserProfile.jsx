@@ -211,7 +211,9 @@ export default function UserProfile() {
                 {teams.find((team) => team.id_team === localUser.id_team).name}
               </h2>
               <br />
-              <h2 className="text-white">Matricule: {localUser.registration_number}</h2>
+              <h2 className="text-white">
+                Matricule: {localUser.registration_number}
+              </h2>
               <h2 className="text-break text-white">
                 Mail:{" "}
                 <button

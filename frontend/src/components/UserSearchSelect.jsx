@@ -10,7 +10,9 @@ export default function UserSearchSelect({ users, setUsers, label }) {
   useEffect(() => {
     if (!users.length) {
       setSelectedUsers([]);
-    } else if (users[0] && typeof users[0] === "number" &&
+    } else if (
+      users[0] &&
+      typeof users[0] === "number" &&
       selectedUsers.find(
         (uf) =>
           !users.includes(uf.id_user) &&
@@ -24,7 +26,7 @@ export default function UserSearchSelect({ users, setUsers, label }) {
       )
         .then((usersData) => setSelectedUsers(usersData))
         .catch();
-    } else if (users[0] && typeof users[0] !== "number"){
+    } else if (users[0] && typeof users[0] !== "number") {
       const newSelectedUsers = [];
       users.forEach((user) => {
         if (user && user.id_user) {

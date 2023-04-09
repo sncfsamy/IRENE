@@ -40,9 +40,9 @@ div.bg-gray.last-comment {
   animation: blink-last-comment 10s;
 }
 
-@keyframes blink-last-comment { 
-  10% { 
-    color:rgb(3, 143, 61);
+@keyframes blink-last-comment {
+  10% {
+    color: rgb(3, 143, 61);
   }
 }
 

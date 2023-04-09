@@ -1,13 +1,13 @@
-const models = require("./src/models");
-
+/* eslint-disable no-await-in-loop */
 const fs = require("fs");
 const path = require("path");
+const models = require("./src/models");
 
 const deleteOrphanFiles = () => {
   models.asset
     .getCount()
     .then(async ([[{ total }]]) => {
-      console.warn("Removing orphan files from /uploads");
+      console.info("Removing orphan files from /uploads");
       const iterations = Math.ceil(total / 100);
       let databaseFiles = [];
       for (let i = 1; i <= iterations; i += 1) {
@@ -34,8 +34,7 @@ const deleteOrphanFiles = () => {
               .readdirSync(path.join("uploads", folders[i]))
               .map((file) => path.join("uploads", folders[i], file)),
           ];
-        else 
-          files.push(path.join("uploads", folders[i]));
+        else files.push(path.join("uploads", folders[i]));
       }
       if (fs.existsSync(path.join("uploads", "idea_undefined")))
         files = [
@@ -49,12 +48,16 @@ const deleteOrphanFiles = () => {
           path.join("uploads", "challenges")
         );
         for (let i = 0; i < challengeFolders.length; i += 1) {
-            files = [
-              ...files,
-              ...fs
-                .readdirSync(path.join("uploads", "challenges", challengeFolders[i]))
-                .map((file) => path.join("uploads", "challenges",  challengeFolders[i], file)),
-            ];
+          files = [
+            ...files,
+            ...fs
+              .readdirSync(
+                path.join("uploads", "challenges", challengeFolders[i])
+              )
+              .map((file) =>
+                path.join("uploads", "challenges", challengeFolders[i], file)
+              ),
+          ];
         }
       }
       const toDelete = [];
@@ -79,12 +82,12 @@ const deleteOrphanFiles = () => {
       toDelete.forEach((file) => fs.rmSync(`./${file}`));
       if (toDeleteFromDb.length) {
         await models.asset.deleteIds(toDeleteFromDb);
-        console.log(`Removed ${toDeleteFromDb.length} oprhan db asset`);
+        console.info(`Removed ${toDeleteFromDb.length} oprhan db asset`);
       }
       if (toDelete.length)
-        console.log(`Deleted ${toDelete.length} orphan files`);
+        console.info(`Deleted ${toDelete.length} orphan files`);
       if (!toDelete.length && !toDeleteFromDb.length)
-        console.log("Nothing to delete");
+        console.info("Nothing to delete");
     })
     .catch((error) => console.error(error));
 };

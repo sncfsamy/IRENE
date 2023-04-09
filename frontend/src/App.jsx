@@ -204,7 +204,6 @@ function App() {
           });
       })
       .catch(() => {
-        console.log("déco")
         setUser();
         setIsLogged(false);
         setIsLoading(false);
@@ -237,7 +236,10 @@ function App() {
               setIsLogged={setIsLogged}
             />
           ) : (
-            <UnAuthenticatedApp setIsLogged={setIsLogged} setRefreshToken={setRefreshToken} />
+            <UnAuthenticatedApp
+              setIsLogged={setIsLogged}
+              setRefreshToken={setRefreshToken}
+            />
           )}
         </BrowserRouter>
         {isLoading ? <Loader /> : ""}

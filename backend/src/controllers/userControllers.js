@@ -270,7 +270,9 @@ const login = (req, res) => {
                   {
                     sub: user.id_user,
                     iat: Math.floor(new Date().getTime() / 1000),
-                    exp: Math.floor(new Date().getTime() / 1000) + parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10),
+                    exp:
+                      Math.floor(new Date().getTime() / 1000) +
+                      parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10),
                   },
                   process.env.JWT_CKEDITOR_UPLOAD_SECRET
                 ),

@@ -20,9 +20,7 @@ export default function SkillSearch() {
       searchParams.set("page", 1);
       setSearchParams(searchParams);
     }
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/skills?${searchParams}`
-    )
+    customFetch(`${import.meta.env.VITE_BACKEND_URL}/skills?${searchParams}`)
       .then((results) => {
         setSearchResults(results);
         if (results.length === 0) {
@@ -41,7 +39,7 @@ export default function SkillSearch() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (searchTerms.length >= 3) {
-      searchParams.set("search_terms", searchTerms)
+      searchParams.set("search_terms", searchTerms);
       if (!searchParams.has("page")) searchParams.set("page", 1);
       setSearchParams(searchParams);
     } else {
@@ -51,7 +49,10 @@ export default function SkillSearch() {
   };
   useEffect(() => setIsLoading(false), []);
   useEffect(() => {
-    if (searchParams.has("search_terms") && searchParams.get("search_terms").length >= 3) {
+    if (
+      searchParams.has("search_terms") &&
+      searchParams.get("search_terms").length >= 3
+    ) {
       search();
     }
   }, [searchParams.get("page")]);
@@ -96,7 +97,12 @@ export default function SkillSearch() {
                   id="search_terms"
                   placeholder="Compétence recherchée"
                   onChange={(e) => setSearchTerms(e.target.value)}
-                  value={searchTerms || (searchParams.has("search_terms") && searchParams.get("search_terms")) || ""}
+                  value={
+                    searchTerms ||
+                    (searchParams.has("search_terms") &&
+                      searchParams.get("search_terms")) ||
+                    ""
+                  }
                 />
               </div>
               <div className="input-group-append">

@@ -1,7 +1,8 @@
 require("dotenv").config();
-const cron = require('node-cron');
-const { deleteOrphanFiles } = require('./cron');
+const cron = require("node-cron");
+const { deleteOrphanFiles } = require("./cron");
 const app = require("./src/app");
+
 const port = parseInt(process.env.APP_PORT ?? "5000", 10);
 
 app.listen(port, (err) => {
@@ -13,5 +14,5 @@ app.listen(port, (err) => {
   }
 });
 
-cron.schedule('30 3 * * *', deleteOrphanFiles);
+cron.schedule("30 3 * * *", deleteOrphanFiles);
 deleteOrphanFiles();
