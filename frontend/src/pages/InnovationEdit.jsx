@@ -295,7 +295,7 @@ function InnovationEdit() {
         )}
       </h1>
       <form
-        className={`d-flex flex-column justify-content-center rounded w-100 p-0 px-3 m-0 mb-2 ${
+        className={`d-flex flex-column justify-content-center rounded w-100 p-0 pt-2 px-3 m-0 mb-2 ${
           darkMode === 0 ? "bg-white" : ""
         }`}
         style={{

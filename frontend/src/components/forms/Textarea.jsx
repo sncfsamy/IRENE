@@ -49,6 +49,7 @@ function Textarea({
       editorRef.current
         .create(editorDivRef.current, {
           licenseKey: "",
+          removePlugins: ["MediaEmbedToolbar"],
           mediaEmbed: {
             previewsInData: true,
             extraProviders: [

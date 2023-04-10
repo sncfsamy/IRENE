@@ -3,12 +3,12 @@ const fs = require("fs");
 const models = require("../models");
 
 const orderingColumns = [
-  "created_at", // 0
-  "finished_at", // 1
-  "id_organisation", // 2
-  "status", // 3
-  "manager_validated_at", // 4
-  "ambassador_validated_at", // 5
+  "created_at",
+  "finished_at",
+  "id_organisation",
+  "status",
+  "manager_validated_at",
+  "ambassador_validated_at",
 ];
 const browse = async (req, res) => {
   const searchFilters = [];
