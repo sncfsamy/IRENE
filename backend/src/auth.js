@@ -1,24 +1,27 @@
 const argon2 = require("argon2");
 const jwt = require("jsonwebtoken");
 
-const defPerms = {
-  manage_ideas_manager: [],
-  manage_ideas_ambassador: [],
-  manage_challenges_ambassador: [],
-  manage_challenges_all: [],
-  manage_teams: [],
-  manage_users: [],
-  manage_organisations: [],
-  manage_roles: [],
-  manage_all: [],
-};
-let permissions = { ...defPerms };
-
 const hashingParams = {
   type: argon2.argon2id,
   timeCost: 5,
   parallelism: 1,
 };
+
+const defPerms = {
+  manage_ideas_manager: [],
+  manage_ideas_ambassador: [],
+  manage_ideas_all : [],
+  manage_challenges_ambassador: [],
+  manage_challenges_all: [],
+  manage_users: [],
+  manage_categories: [],
+  manage_organisations: [],
+  manage_teams: [],
+  manage_roles: [],
+  manage_all: [],
+};
+
+let permissions = { ...defPerms };
 
 const loadPermissions = (roles) => {
   try {
@@ -125,7 +128,7 @@ const renewToken = (req, res) => {
       maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
       httpOnly: true,
       sameSite: true,
-      secure: false,
+      secure: true,
       domain: process.env.COOKIE_DOMAIN,
     });
     res.sendStatus(200);
@@ -191,7 +194,7 @@ const verifyToken = (req, res, next) => {
               maxAge: 0,
               httpOnly: true,
               sameSite: true,
-              secure: false,
+              secure: true,
               domain: process.env.COOKIE_DOMAIN,
             })
             .status(401)

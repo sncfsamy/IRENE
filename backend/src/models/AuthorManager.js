@@ -14,8 +14,11 @@ class AuthorManager extends AbstractManager {
         this.table
       } AS a INNER JOIN ${this.join.user} AS u ON u.id_user = a.id_user WHERE ${
         this.id
-      } IN (?)`,
-      [idsIdea]
+      } IN (${Number.isNaN(idsIdea) && ((typeof idsIdea === "string" && idsIdea
+        .split(",") || idsIdea)
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !Number.isNaN(id))
+        .join(",")) || idsIdea})`
     );
   }
 

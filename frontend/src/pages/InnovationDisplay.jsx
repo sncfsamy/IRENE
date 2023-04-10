@@ -239,13 +239,13 @@ export default function InnovationDisplay() {
         modalAction.action === "validateAmbassador" &&
         (perms.isAmbassador || perms.isAdmin)
       ) {
-        data = { ambassador_validated_at: 1, status: 2 };
+        data = { ambassador_validated_at: 1, status: 3 };
       }
       if (
         modalAction.action === "validateManager" &&
         (perms.isManager || perms.isAdmin)
       ) {
-        data = { manager_validated_at: 1, status: 3 };
+        data = { manager_validated_at: 1, status: 2 };
       }
       if (
         modalAction.action === "reject" &&
@@ -290,11 +290,11 @@ export default function InnovationDisplay() {
                   idea: newIdea,
                 });
                 $(() => {
-                  $(".modal").modal("hide");
                   $('[data-toggle="popover"]').popover("dispose");
                   $('[data-toggle="popover"]').popover();
                 });
               }
+              $(".modal").modal("hide");
               setTimeout(setModalAction, 1000, {});
             });
           })
@@ -393,7 +393,7 @@ export default function InnovationDisplay() {
       ideaData.authors.find((author) => author.is_author).id_user !==
         user.id_user &&
       (ideaData.idea.status === 0 || ideaData.idea.status === 4) &&
-      !user.perms.manage_all) ||
+      !perms.isManager && !perms.isAmbassador && !perms.isAdmin) ||
     !ideaData.idea ||
     !ideaData.idea.name ||
     ideaData.idea.name.length === 0

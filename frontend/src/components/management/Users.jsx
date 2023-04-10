@@ -346,7 +346,7 @@ export default function Users({
                           organisation.id_organisation === user.id_organisation
                       ).name
                     }{" "}
-                    / {teams.find((team) => team.id_team === user.id_team).name}
+                    / {teams.find((team) => team.id_team === user.id_team).name} ({user.id_team})
                   </span>
                   <span className="col-">
                     {roles.find((role) => role.id_role === user.id_role).name}
@@ -518,7 +518,7 @@ export default function Users({
                       (selectedUser && selectedUser.id_team) ||
                       teams[0].id_team
                 }
-                values={formatted.teams}
+                values={addMode ? formatted.teams.filter((team) => (userModification && team.id_organisation === userModification.id_organisation)) : selectedUser && formatted.teams.filter((team) => (selectedUser && team.id_organisation === selectedUser.id_organisation)) || formatted.teams}
                 setSelectedValue={handleChange}
               />
               <Select

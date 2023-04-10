@@ -294,7 +294,7 @@ const login = (req, res) => {
                 maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
                 httpOnly: true,
                 sameSite: true,
-                secure: false,
+                secure: true,
                 domain: process.env.COOKIE_DOMAIN,
               })
               .status(200)
@@ -315,31 +315,6 @@ const login = (req, res) => {
     });
 };
 
-const searchUsers = (req, res) => {
-  if (req.query.search_terms) {
-    models.user
-      .search(req.query.search_terms.split(" "))
-      .then((results) => {
-        res.json(results[0]);
-      })
-      .catch((err) => {
-        console.warn(err);
-        res.sendStatus(404);
-      });
-  } else if (req.query.users) {
-    const idsUsers = req.query.users.split(",").map((id) => parseInt(id, 10));
-    models.user
-      .findSome(idsUsers)
-      .then(([rows]) => {
-        res.send(rows);
-      })
-      .catch((err) => {
-        console.warn(err);
-        res.sendStatus(500);
-      });
-  } else res.sendStatus(404);
-};
-
 module.exports = {
   browse,
   read,
@@ -350,6 +325,5 @@ module.exports = {
   add,
   login,
   logout,
-  searchUsers,
   batchDestroy,
 };

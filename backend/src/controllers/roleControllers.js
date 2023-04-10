@@ -14,6 +14,8 @@ const browse = (req, res) => {
     });
 };
 
+// called from auth.js at start, stock function to reload perms on backend memory when 
+// perms are changed by edit function
 const loadPermsData = (loadPermissionsFunction) => {
   loadPermissions = loadPermissionsFunction;
   models.role

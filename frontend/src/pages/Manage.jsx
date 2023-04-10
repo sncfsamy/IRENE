@@ -471,9 +471,9 @@ export default function Manage({
               user.perms.manage_ideas_manager ||
               user.perms.manage_all
             ) &&
-              page === "ideas") ||
+              (page === "ideas" ||
             page === "manager" ||
-            page === "ambassador" ? (
+            page === "ambassador")) ? (
               <Unauthorized />
             ) : (
               ""

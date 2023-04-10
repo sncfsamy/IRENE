@@ -13,19 +13,19 @@ class UserManager extends AbstractManager {
     const initialSql = `SELECT id_user, firstname, lastname, registration_number, mail, id_organisation, id_team, id_role FROM ${this.table}`;
     const initialSqlWithSearch = `SELECT u.id_user, u.firstname, u.lastname, u.registration_number, u.mail, u.id_organisation, u.id_team, u.id_role FROM ${this.table} AS u`;
     let countSql = `SELECT COUNT(*) AS total FROM ${this.table} AS u`;
-
+    const details = ` INNER JOIN ${this.join.organisation} AS o ON u.id_organisation = o.id_organisation INNER JOIN ${this.join.team} AS t ON u.id_team = t.id_team`;
     let sql = initialSql;
     const sqlData = [];
     if (searchTerms && searchTerms.length) {
-      sql = `${initialSqlWithSearch} WHERE firstname LIKE ? OR lastname LIKE ? OR registration_number LIKE ? OR (SELECT o.name FROM ${this.join.organisation} AS o WHERE o.id_organisation = u.id_organisation) LIKE ? OR (SELECT t.name FROM ${this.join.team} AS t WHERE t.id_team = u.id_team) LIKE ?`;
+      sql = `${initialSqlWithSearch}${details} WHERE MATCH(u.firstname,u.lastname) AGAINST(? IN NATURAL LANGUAGE MODE) OR MATCH(o.name) AGAINST(? IN NATURAL LANGUAGE MODE) AND MATCH(t.name) AGAINST(? IN NATURAL LANGUAGE MODE)`;
       countSql = `${countSql} ${sql.replace(initialSqlWithSearch, "")}`;
       sqlData.push(searchTerms);
-      sqlData.push(`%${searchTerms}%`);
-      sqlData.push(`%${searchTerms}%`);
-      sqlData.push(`%${searchTerms}%`);
-      sqlData.push(`%${searchTerms}%`);
-      sqlData.push(`%${searchTerms}%`);
+      sqlData.push(searchTerms);
+      sqlData.push(searchTerms);
+      sqlData.push(searchTerms);
+      sqlData.push(searchTerms);
     }
+    const totalData = [...sqlData];
     sqlData.push(limit);
     sqlData.push(offset);
     return [
@@ -34,7 +34,7 @@ class UserManager extends AbstractManager {
         searchTerms && searchTerms.length
           ? countSql
           : sql.replace(initialSql, countSql),
-        sqlData
+        totalData
       ),
     ];
   }
@@ -111,20 +111,24 @@ class UserManager extends AbstractManager {
   }
 
   search(searchTerms) {
-    const initialSql = `SELECT firstname, lastname, id_user, id_organisation, id_team FROM ${this.table}`;
+    const initialSql = `SELECT u.firstname, u.lastname, u.id_user, u.id_organisation, u.id_team FROM ${this.table} AS u INNER JOIN ${this.join.organisation} AS o ON u.id_organisation = o.id_organisation INNER JOIN ${this.join.team} AS t ON u.id_team = t.id_team`;
     const data = [];
-    searchTerms.forEach((term) => {
-      data.push(`%${term}%`);
-      data.push(`%${term}%`);
+    console.log(searchTerms);
+    searchTerms.split(" ").forEach((term) => {
+      data.push(`${term}`);
+      console.log(term);
     });
+    //data.push(searchTerms.join(" "));
     return this.database.query(
-      `${searchTerms.reduce(
-        (sql, _, i) =>
-          `${sql} ${
-            i === 0 ? "WHERE" : "OR"
-          } firstname LIKE ? OR lastname LIKE ?`,
-        initialSql
-      )} LIMIT 5`,
+      `${searchTerms
+        .split("s+")
+        .reduce(
+          (sql, _, i) =>
+            `${sql} ${
+              i === 0 ? "WHERE" : "OR"
+            } (MATCH(u.firstname,u.lastname,o.name,t.name) AGAINST(? IN NATURAL LANGUAGE MODE))`,
+          initialSql
+        )} LIMIT 5`,
       data
     );
   }

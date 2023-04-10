@@ -16,8 +16,40 @@ export default function Ideas({
   const { user, setIsLoading, customFetch, darkMode, isLoading } =
     useContext(SharedContext);
   const [notification, setNotification] = useState();
-
   const [ideasData, setIdeasData] = useState({ ideas: [], authors: [] });
+  const getIdeaData = () => {
+    setIsLoading(true);
+    const params = new URLSearchParams();
+    if (page === "ambassador") {
+      params.set("organisations", user.id_organisation);
+    }
+    if (page === "manager") {
+      params.set("teams", user.id_team);
+    }
+    searchFilters.forEach((value, key) => params.set(key, value));
+    params.set("limit", Math.min(searchFilters.get("limit") ?? 20, 100));
+    params.set(
+      "order_by",
+      searchFilters.has("order_by") ? searchFilters.get("order_by") : 0
+    );
+    params.set(
+      "order",
+      searchFilters.has("order") ? searchFilters.get("order") : 0
+    );
+    customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas?${params}`)
+      .then((data) => {
+        setIdeasData(data);
+        setIsLoading(false);
+        clearTimeout(window.loadTimeout);
+        window.loadTimeout = undefined;
+      })
+      .catch((err) => {
+        console.warn(err);
+        setIsLoading(false);
+        clearTimeout(window.loadTimeout);
+        window.loadTimeout = undefined;
+      });
+  };
   useEffect(() => {
     if (window.loadTimeout) {
       clearTimeout(window.loadTimeout);
@@ -25,37 +57,7 @@ export default function Ideas({
     window.loadTimeout = setTimeout(
       (incPage) => {
         if (page === incPage) {
-          setIsLoading(true);
-          const params = new URLSearchParams();
-          if (page === "ambassador") {
-            params.set("organisations", user.id_organisation);
-          }
-          if (page === "manager") {
-            params.set("teams", user.id_team);
-          }
-          searchFilters.forEach((value, key) => params.set(key, value));
-          params.set("limit", Math.min(searchFilters.get("limit") ?? 20, 100));
-          params.set(
-            "order_by",
-            searchFilters.has("order_by") ? searchFilters.get("order_by") : 0
-          );
-          params.set(
-            "order",
-            searchFilters.has("order") ? searchFilters.get("order") : 0
-          );
-          customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas?${params}`)
-            .then((data) => {
-              setIdeasData(data);
-              setIsLoading(false);
-              clearTimeout(window.loadTimeout);
-              window.loadTimeout = undefined;
-            })
-            .catch((err) => {
-              console.warn(err);
-              setIsLoading(false);
-              clearTimeout(window.loadTimeout);
-              window.loadTimeout = undefined;
-            });
+          getIdeaData();
         }
       },
       !searchFilters.get("search_terms") ? 0 : 600,
@@ -79,6 +81,7 @@ export default function Ideas({
           success: true,
           deleted: deletedIds.length,
         });
+        getIdeaData();
       } else {
         setNotification({});
       }

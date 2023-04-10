@@ -289,131 +289,160 @@ const edit = (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const status = parseInt(req.body.status, 10);
-    const authors = [{ isAuthor: true, idUser: req.payload.sub }];
-    if (req.body.assets && (req.body.status === 0 || req.body.status === 4)) {
-      checkAssets(req, id);
-    }
-    if (req.body.coauthors && req.body.coauthors.length) {
-      req.body.coauthors
-        .filter((coauthor) => coauthor !== null)
-        .map((coauthor) =>
-          typeof coauthor === "number" ? coauthor : coauthor.id_user
-        )
-        .forEach((coauthor) => {
-          authors.push({ isAuthor: false, idUser: coauthor });
-        });
-    }
-    const update = [];
-    if (req.body.name) {
-      update.push({
-        param: "name",
-        value: req.body.name,
-      });
-    }
-    if (req.body.description !== undefined) {
-      update.push({
-        param: "description",
-        value: req.body.description,
-      });
-    }
-    if (req.body.problem !== undefined) {
-      update.push({
-        param: "problem",
-        value: req.body.problem.replace(/\/idea_undefined\//g, `/idea_${id}/`),
-      });
-    }
-    if (req.body.solution !== undefined) {
-      update.push({
-        param: "solution",
-        value: req.body.solution.replace(/\/idea_undefined\//g, `/idea_${id}/`),
-      });
-    }
-    if (req.body.gains) {
-      update.push({
-        param: "gains",
-        value: req.body.gains.replace(/\/idea_undefined\//g, `/idea_${id}/`),
-      });
-    }
-    if (req.body.finished_at) {
-      update.push({
-        param: "finished_at",
-        value: req.body.finished_at,
-      });
-    }
-    if (req.body.manager_validated_at) {
-      update.push({
-        param: "manager_validated_at",
-        value: req.body.manager_validated_at,
-      });
-    }
-    if (req.body.ambassador_validated_at) {
-      update.push({
-        param: "ambassador_validated_at",
-        value: req.body.ambassador_validated_at,
-      });
-    }
-    if (!Number.isNaN(status)) {
-      update.push({
-        param: "status",
-        value: status,
-      });
-    }
-    if (req.body.categories) {
-      models.ideaCategorie
-        .delete(id)
-        .then(() => {
-          const categoriesData = [];
-          req.body.categories.forEach((categorie) => {
-            categoriesData.push(categorie);
-            categoriesData.push(id);
+    models.author.find(id).then(([currentAuthors]) => {
+      const author = currentAuthors.find((a) => a.is_author);
+      if (
+        (author.id_user === req.payload.sub &&
+          (Number.isNaN(status) || status === 0 || status === 4)) ||
+        req.perms.manage_all ||
+        (req.perms.manage_ideas_manager &&
+          req.payload.team === author.id_team &&
+          (status === 2 || status === 4 || status === 5)) ||
+        (req.perms.manage_ideas_ambassador &&
+          req.payload.organisation === author.id_organisation &&
+          (status >= 2 && status <= 5))
+      ) {
+        const authors = [{ isAuthor: true, idUser: author.id_user }];
+        if (
+          req.body.assets &&
+          (req.body.status === 0 || req.body.status === 4)
+        ) {
+          checkAssets(req, id);
+        }
+        if (req.body.coauthors && req.body.coauthors.length) {
+          req.body.coauthors
+            .filter((coauthor) => coauthor !== null)
+            .map((coauthor) =>
+              typeof coauthor === "number" ? coauthor : coauthor.id_user
+            )
+            .forEach((coauthor) => {
+              authors.push({ isAuthor: false, idUser: coauthor });
+            });
+        }
+        const update = [];
+        if (req.body.name) {
+          update.push({
+            param: "name",
+            value: req.body.name,
           });
+        }
+        if (req.body.description !== undefined) {
+          update.push({
+            param: "description",
+            value: req.body.description,
+          });
+        }
+        if (req.body.problem !== undefined) {
+          update.push({
+            param: "problem",
+            value: req.body.problem.replace(
+              /\/idea_undefined\//g,
+              `/idea_${id}/`
+            ),
+          });
+        }
+        if (req.body.solution !== undefined) {
+          update.push({
+            param: "solution",
+            value: req.body.solution.replace(
+              /\/idea_undefined\//g,
+              `/idea_${id}/`
+            ),
+          });
+        }
+        if (req.body.gains) {
+          update.push({
+            param: "gains",
+            value: req.body.gains.replace(
+              /\/idea_undefined\//g,
+              `/idea_${id}/`
+            ),
+          });
+        }
+        if (req.body.finished_at) {
+          update.push({
+            param: "finished_at",
+            value: req.body.finished_at,
+          });
+        }
+        if (req.body.manager_validated_at) {
+          update.push({
+            param: "manager_validated_at",
+            value: req.body.manager_validated_at,
+          });
+        }
+        if (req.body.ambassador_validated_at) {
+          update.push({
+            param: "ambassador_validated_at",
+            value: req.body.ambassador_validated_at,
+          });
+        }
+        if (!Number.isNaN(status)) {
+          update.push({
+            param: "status",
+            value: status,
+          });
+        }
+        if (req.body.categories) {
           models.ideaCategorie
-            .add(req.body.categories, categoriesData)
-            .then(() => {})
+            .delete(id)
+            .then(() => {
+              const categoriesData = [];
+              req.body.categories.forEach((categorie) => {
+                categoriesData.push(categorie);
+                categoriesData.push(id);
+              });
+              models.ideaCategorie
+                .add(req.body.categories, categoriesData)
+                .then(() => {})
+                .catch((err) => {
+                  console.warn(err);
+                  res.sendStatus(500);
+                });
+            })
             .catch((err) => {
               console.warn(err);
               res.sendStatus(500);
             });
-        })
-        .catch((err) => {
-          console.warn(err);
-          res.sendStatus(500);
-        });
-    }
-    if (req.body.coauthors) {
-      models.author
-        .delete(id)
-        .then(() => {
+        }
+        if (req.body.coauthors) {
           models.author
-            .add(authors, id)
-            .then(() => {})
+            .delete(id)
+            .then(() => {
+              models.author
+                .add(authors, id)
+                .then(() => {})
+                .catch((err) => {
+                  console.warn(err);
+                  res.sendStatus(500);
+                });
+            })
             .catch((err) => {
               console.warn(err);
               res.sendStatus(500);
             });
-        })
-        .catch((err) => {
-          console.warn(err);
-          res.sendStatus(500);
-        });
-    }
-    if (update.length) {
-      models.idea
-        .update(id, update)
-        .then(([result]) => {
-          if (result.affectedRows === 0) {
-            res.sendStatus(404);
-          } else {
-            res.sendStatus(204);
-          }
-        })
-        .catch((err) => {
-          console.warn(err);
-          res.sendStatus(500);
-        });
-    } else {
-      res.sendStatus(204);
-    }
+        }
+        if (update.length) {
+          models.idea
+            .update(id, update)
+            .then(([result]) => {
+              if (result.affectedRows === 0) {
+                res.sendStatus(404);
+              } else {
+                res.sendStatus(204);
+              }
+            })
+            .catch((err) => {
+              console.warn(err);
+              res.sendStatus(500);
+            });
+        } else {
+          res.sendStatus(204);
+        }
+      } else {
+        res.sendStatus(403);
+      }
+    });
   } catch (err) {
     console.warn(err);
     res.sendStatus(500);
@@ -466,31 +495,54 @@ const add = (req, res) => {
 
 const destroy = (req, res) => {
   const id = parseInt(req.params.id, 10);
-  models.asset
-    .findToDelete([id])
-    .then(([results]) => {
-      if (results.length) {
+  models.author
+    .find(id)
+    .then(([currentAuthors]) => {
+      const author = currentAuthors.find((a) => a.is_author);
+      if (
+        author.id_user === req.payload.sub ||
+        req.perms.manage_all ||
+        (req.perms.manage_ideas_manager &&
+          req.payload.team === author.id_team) ||
+        (req.perms.manage_ideas_ambassador &&
+          req.payload.organisation === author.id_organisation)
+      ) {
         models.asset
-          .deleteIds(results.map((asset) => asset.id_asset))
-          .then(([assets]) => {
-            if (assets.affectedRows) {
-              fs.rmSync(`uploads/idea_${id}`, { recursive: true, force: true });
+          .findToDelete([id])
+          .then(([results]) => {
+            if (results.length) {
+              models.asset
+                .deleteIds(results.map((asset) => asset.id_asset))
+                .then(([assets]) => {
+                  if (assets.affectedRows) {
+                    fs.rmSync(`uploads/idea_${id}`, {
+                      recursive: true,
+                      force: true,
+                    });
+                  }
+                });
             }
+            models.idea
+              .delete(id)
+              .then(([result]) => {
+                if (result.affectedRows === 0) {
+                  res.sendStatus(404);
+                } else {
+                  res.sendStatus(204);
+                }
+              })
+              .catch((err) => {
+                console.warn(err);
+                res.sendStatus(500);
+              });
+          })
+          .catch((err) => {
+            console.warn(err);
+            res.sendStatus(500);
           });
+      } else {
+        res.sendStatus(403);
       }
-      models.idea
-        .delete(id)
-        .then(([result]) => {
-          if (result.affectedRows === 0) {
-            res.sendStatus(404);
-          } else {
-            res.sendStatus(204);
-          }
-        })
-        .catch((err) => {
-          console.warn(err);
-          res.sendStatus(500);
-        });
     })
     .catch((err) => {
       console.warn(err);
