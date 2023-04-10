@@ -127,7 +127,7 @@ const renewToken = (req, res) => {
     res.cookie("irene_auth", token, {
       maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
       httpOnly: true,
-      sameSite: true,
+      sameSite: "Strict",
       secure: true,
       domain: process.env.COOKIE_DOMAIN,
     });
@@ -193,7 +193,7 @@ const verifyToken = (req, res, next) => {
             .cookie("irene_auth", "", {
               maxAge: 0,
               httpOnly: true,
-              sameSite: true,
+              sameSite: "Strict",
               secure: true,
               domain: process.env.COOKIE_DOMAIN,
             })

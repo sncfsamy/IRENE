@@ -293,7 +293,7 @@ const login = (req, res) => {
               .cookie("irene_auth", token, {
                 maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
                 httpOnly: true,
-                sameSite: true,
+                sameSite: "Strict",
                 secure: true,
                 domain: process.env.COOKIE_DOMAIN,
               })
