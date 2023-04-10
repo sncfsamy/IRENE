@@ -93,7 +93,7 @@ const renewToken = (req, res) => {
       renewTokenString,
       process.env.JWT_REFRESH_SECRET + payload.sub
     );
-    const refreshExchangePayload = jwt.decode(
+    const refreshExchangePayload = jwt.verify(
       req.body.refreshExchangeToken,
       process.env.JWT_REFRESH_EXCHANGE_SECRET + req.cookies.irene_auth
     );
