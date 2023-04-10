@@ -11,7 +11,7 @@ export default function UnAuthenticatedApp({ setRefreshToken, setIsLogged }) {
         element={<About />}
       />
       <Route
-        path={`${import.meta.env.VITE_FRONTEND_URI}*`}
+        path={`${import.meta.env.VITE_FRONTEND_URI}/*`}
         element={
           <Authentification
             setIsLogged={setIsLogged}

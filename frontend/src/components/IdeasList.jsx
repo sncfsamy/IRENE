@@ -125,7 +125,7 @@ export default function IdeaList({
                   ""
                 )}
                 <div
-                  className="management-item-main text-left col-sm"
+                  className="management-item-main text-left col-sm d-flex"
                   aria-hidden="true"
                   onClick={() => {
                     $(".modal").modal("hide");
@@ -142,9 +142,8 @@ export default function IdeaList({
                     );
                   }}
                 >
-                  <h2>
-                    {idea.name[0].toUpperCase()}
-                    {idea.name.substring(1)}
+                  <h2 className="m-0">
+                    {`${idea.name[0].toUpperCase() + idea.name.substring(1)}`}
                   </h2>
                 </div>
                 <div
