@@ -5,6 +5,7 @@ import OrganisationFilter from "@components/OrganisationFilter";
 import StatusFilter from "@components/StatusFilter";
 import Pagination from "@components/Pagination";
 import UserSearchSelect from "@components/UserSearchSelect";
+import Ordering from "@components/Ordering";
 import DatePicker from "../components/forms/DatePicker";
 import SharedContext from "../contexts/sharedContext";
 import defaultIdeaImg from "../assets/idea_default_picture.heif";
@@ -50,37 +51,60 @@ export default function InnovationSearch() {
   } = useContext(SharedContext);
   const [searchParams, setSearchParams] = useSearchParams();
   let newSearchFilter = initialSearchFilter;
+  const [ideasData, setIdeasData] = useState(); // idées venant du back
   if (searchParams.has("page")) {
     newSearchFilter = {
       ...newSearchFilter,
       page: parseInt(searchParams.get("page"), 10),
     };
-  }
-  if (searchParams.has("users")) {
+  } else searchParams.set("page", 1);
+  if (searchParams.has("users") && searchParams.get("users").length) {
     newSearchFilter = {
       ...newSearchFilter,
       users: searchParams.get("users").split(","),
     };
   }
-  if (searchParams.has("status")) {
+  if (searchParams.has("status") && searchParams.get("status").length) {
     newSearchFilter = {
       ...newSearchFilter,
       status: searchParams.get("status").split(","),
     };
   }
-  if (searchParams.has("organisations")) {
+  if (
+    searchParams.has("organisations") &&
+    searchParams.get("organisations").length
+  ) {
     newSearchFilter = {
       ...newSearchFilter,
       organisations: searchParams.get("organisations").split(","),
     };
   }
-  if (searchParams.has("categories")) {
+  if (searchParams.has("categories") && searchParams.get("categories").length) {
     newSearchFilter = {
       ...newSearchFilter,
       organisations: searchParams.get("categories").split(","),
     };
   }
-  const [ideasData, setIdeasData] = useState(); // idées venant du back
+  if (searchParams.has("order_by") && searchParams.get("order_by").length) {
+    newSearchFilter = {
+      ...newSearchFilter,
+      order_by: searchParams.get("order_by"),
+    };
+  } else
+    newSearchFilter = {
+      ...newSearchFilter,
+      order_by: 0,
+    };
+  if (searchParams.has("order") && searchParams.get("order").length) {
+    newSearchFilter = {
+      ...newSearchFilter,
+      order: searchParams.get("order"),
+    };
+  } else
+    newSearchFilter = {
+      ...newSearchFilter,
+      order: 0,
+    };
   const [searchFilters, setSearchFilters] = useState(newSearchFilter); // filtres de recherche envoyés pour le get
   const [selectedUsers, setSelectedUsers] = useState([]); // utilisateurs sélectionnés pour le filtrage
   const noteStarOffColor = darkMode === 2 ? "text-light" : "text-dark";
@@ -89,12 +113,18 @@ export default function InnovationSearch() {
       e.preventDefault();
     }
     setIsLoading(true);
-    searchFilters.page = searchParams.get("page") || 1;
-    setSearchParams(searchFilters);
+    const cleanedSearchFilter = {};
+    for (const param in searchFilters) {
+      if (searchFilters[param] && searchFilters[param].length)
+        cleanedSearchFilter[param] = searchFilters[param];
+    }
+    const searchParamsConcatenated = new URLSearchParams({
+      ...Object.fromEntries(searchParams),
+      ...cleanedSearchFilter,
+    });
+    setSearchParams(searchParamsConcatenated);
     customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/ideas?${new URLSearchParams(
-        searchFilters
-      )}`
+      `${import.meta.env.VITE_BACKEND_URL}/ideas?${searchParamsConcatenated}`
     )
       .then((responseData) => {
         const totalPages = Math.ceil(responseData.total / 20);
@@ -430,6 +460,19 @@ export default function InnovationSearch() {
       >
         {ideasData && ideasData.authors && ideasData.ideas.length ? (
           <>
+            <Ordering
+              searchFilters={searchParams}
+              setSearchFilters={setSearchParams}
+              orderElements={[
+                "Date de création",
+                "Date de finalisation",
+                "Organisation",
+                "Status",
+                "Date de validation manager",
+                "Date de validation ambassadeur",
+              ]}
+              executor={search}
+            />
             <Pagination
               searchFilters={searchParams}
               setSearchFilters={setSearchParams}
@@ -471,9 +514,12 @@ export default function InnovationSearch() {
                               (idea.poster &&
                                 `${
                                   import.meta.env.VITE_BACKEND_URL
-                                }/uploads/idea_${idea.id_idea}/${
-                                  idea.poster.file_name
-                                }`) ||
+                                }/uploads/idea_${
+                                  idea.id_idea
+                                }/${idea.poster.file_name.replace(
+                                  /\.[^/.]+$/,
+                                  ""
+                                )}-150.heif`) ||
                               defaultIdeaImg
                             })`,
                           }}

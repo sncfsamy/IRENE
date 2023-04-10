@@ -138,7 +138,7 @@ export default function Ideas({
   );
 }
 Ideas.propTypes = {
-  page: PropTypes.number,
+  page: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   setSelectedToDelete: PropTypes.func,
   addRemoveCallback: PropTypes.func,
   searchFilters: PropTypes.instanceOf(URLSearchParams).isRequired,

@@ -7,8 +7,10 @@ import SharedContext from "../contexts/sharedContext";
 export default function SkillSearch() {
   const { organisations, teams, darkMode, setIsLoading, customFetch } =
     useContext(SharedContext);
-  const [searchTerms, setSearchTerms] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
+  const [searchTerms, setSearchTerms] = useState(
+    searchParams.has("search_terms") ? searchParams.get("search_terms") : ""
+  );
   const [iconHover, setIconHover] = useState();
   const [searchResults, setSearchResults] = useState([]);
   const hoverIcon = (e) => {
@@ -44,18 +46,15 @@ export default function SkillSearch() {
       setSearchParams(searchParams);
     } else {
       setIsLoading(false);
-      setSearchResults();
+      setSearchResults([]);
     }
   };
   useEffect(() => setIsLoading(false), []);
   useEffect(() => {
-    if (
-      searchParams.has("search_terms") &&
-      searchParams.get("search_terms").length >= 3
-    ) {
+    if (searchTerms) {
       search();
     }
-  }, [searchParams.get("page")]);
+  }, [searchParams.get("page"), searchParams.get("search_terms")]);
   return (
     <main className="container d-flex flex-column mt-3 h-100">
       <h1 className="display-1">
@@ -96,13 +95,9 @@ export default function SkillSearch() {
                   className="form-control"
                   id="search_terms"
                   placeholder="Compétence recherchée"
+                  autoComplete="off"
                   onChange={(e) => setSearchTerms(e.target.value)}
-                  value={
-                    searchTerms ||
-                    (searchParams.has("search_terms") &&
-                      searchParams.get("search_terms")) ||
-                    ""
-                  }
+                  value={searchTerms}
                 />
               </div>
               <div className="input-group-append">

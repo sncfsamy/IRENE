@@ -6,9 +6,13 @@ import logoIrene from "@assets/logo.heif";
 import logoIreneDark from "@assets/logo_dark.heif";
 import challenge from "@assets/challenge.heif";
 import pepper from "@assets/pepper-300.heif";
+import pepper150 from "@assets/pepper-150.heif";
 import gareNantes from "@assets/gare_nantes-300.heif";
+import gareNantes150 from "@assets/gare_nantes-150.heif";
 import regiolisHydrogene from "@assets/regiolis_hydrogene-300.heif";
+import regiolisHydrogene150 from "@assets/regiolis_hydrogene-150.heif";
 import rails from "@assets/rails-300.heif";
+import rails150 from "@assets/rails-150.heif";
 import SharedContext from "../contexts/sharedContext";
 
 const defaultIdeas = { ideas: [], authors: [] };
@@ -110,11 +114,7 @@ export default function Home() {
           >
             <img
               src={pepper}
-              srcSet={`${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/pepper-150.heif w150,${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/pepper-300.heif w300`}
+              srcSet={`${pepper150} 150w,${pepper} 300w`}
               alt="Pepper: androïde d'assistance client SNCF"
               className="d-none d-lg-block w-100 home-image1 flex-grow-1"
             />
@@ -127,11 +127,7 @@ export default function Home() {
           >
             <img
               src={gareNantes}
-              srcSet={`${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/gare_nantes-150.heif w150,${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/gare_nantes-300.heif w300`}
+              srcSet={`${gareNantes150} 150w,${gareNantes} 300w`}
               alt="Nouvelle gare de Nantes"
               className="d-none d-lg-block w-100"
             />
@@ -144,11 +140,7 @@ export default function Home() {
           >
             <img
               src={regiolisHydrogene}
-              srcSet={`${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/regiolis_hydrogene-150.heif w150,${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/regiolis_hydrogene-300.heif w300`}
+              srcSet={`${regiolisHydrogene150} 150w,${regiolisHydrogene} 300w`}
               alt="TER régiolis à l'hydrogène"
               className="d-none d-lg-block w-100 home-image3"
             />
@@ -159,11 +151,7 @@ export default function Home() {
           >
             <img
               src={rails}
-              srcSet={`${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/rails-150.heif w150,${
-                import.meta.env.VITE_FRONTEND_URI
-              }/assets/rails-300.heif w300`}
+              srcSet={`${rails150} 150w,${rails} 300w`}
               alt="Rails. Crédit prise de vue : JC Milhet / Fret SNCF"
               className="d-none d-lg-block w-100 rounded-bottom"
             />

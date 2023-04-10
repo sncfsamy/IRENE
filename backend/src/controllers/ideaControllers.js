@@ -5,11 +5,10 @@ const models = require("../models");
 const orderingColumns = [
   "created_at", // 0
   "finished_at", // 1
-  "organisation", // 2
-  "user", // 3
-  "status", // 4
-  "manager_validated_at", // 5
-  "ambassador_validated_at", // 6
+  "id_organisation", // 2
+  "status", // 3
+  "manager_validated_at", // 4
+  "ambassador_validated_at", // 5
 ];
 const browse = async (req, res) => {
   const searchFilters = [];
@@ -136,10 +135,15 @@ const browse = async (req, res) => {
     });
   }
 
-  if (req.query.order) {
-    orderParams.push({
-      column: orderingColumns[parseInt(req.query.order_by ?? 0, 10)],
-      order: parseInt(req.query.order, 10) === 0 ? "DESC" : "ASC",
+  if (req.query.order_by) {
+    const orderBy = req.query.order_by.split(",").map((e) => parseInt(e, 10));
+    const orders = req.query.order.split(",").map((e) => parseInt(e, 10));
+    orderBy.forEach((columnIdx, i) => {
+      if (orderingColumns[columnIdx])
+        orderParams.push({
+          column: orderingColumns[columnIdx],
+          order: orders[i] === 0 ? "DESC" : "ASC",
+        });
     });
   }
   Promise.all(models.idea.findAll(searchFilters, orderParams, limit, offset))
@@ -300,7 +304,8 @@ const edit = (req, res) => {
           (status === 2 || status === 4 || status === 5)) ||
         (req.perms.manage_ideas_ambassador &&
           req.payload.organisation === author.id_organisation &&
-          (status >= 2 && status <= 5))
+          status >= 2 &&
+          status <= 5)
       ) {
         const authors = [{ isAuthor: true, idUser: author.id_user }];
         if (

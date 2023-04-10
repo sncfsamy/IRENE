@@ -113,12 +113,9 @@ class UserManager extends AbstractManager {
   search(searchTerms) {
     const initialSql = `SELECT u.firstname, u.lastname, u.id_user, u.id_organisation, u.id_team FROM ${this.table} AS u INNER JOIN ${this.join.organisation} AS o ON u.id_organisation = o.id_organisation INNER JOIN ${this.join.team} AS t ON u.id_team = t.id_team`;
     const data = [];
-    console.log(searchTerms);
     searchTerms.split(" ").forEach((term) => {
       data.push(`${term}`);
-      console.log(term);
     });
-    //data.push(searchTerms.join(" "));
     return this.database.query(
       `${searchTerms
         .split("s+")

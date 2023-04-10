@@ -28,6 +28,7 @@ export default function Manage({
   const [selectedToDelete, setSelectedToDelete] = useState([]);
   const location = useLocation();
   const { page } = useParams();
+  const searchRef = useRef(null);
   const [searchFilters, setSearchFilters] = useSearchParams(
     new URLSearchParams({
       limit: localStorage.getItem("IRENE_MANAGE_ITEMS_PER_PAGE") || 20,
@@ -176,6 +177,14 @@ export default function Manage({
                     aria-haspopup="true"
                     aria-expanded="false"
                     aria-controls="search"
+                    onClick={() =>
+                      setTimeout(
+                        () =>
+                          searchRef.current.offsetParent !== null &&
+                          searchRef.current.focus(),
+                        250
+                      )
+                    }
                   >
                     <span className="sr-only">Rechercher</span>
                     <i className="icons-search icons-size-1x75" />
@@ -193,6 +202,7 @@ export default function Manage({
                             className="form-control"
                             id="search_terms"
                             placeholder="Rechercher"
+                            autoComplete="off"
                             onChange={(e) => {
                               setSearchFilters((searchParams) => {
                                 searchParams.set(
@@ -208,20 +218,8 @@ export default function Manage({
                                 ? searchFilters.get("search_terms")
                                 : ""
                             }
+                            ref={searchRef}
                           />
-                        </div>
-                        <div className="input-group-append">
-                          <button
-                            type="submit"
-                            className={`btn btn-${
-                              darkMode === 0 ? "warning" : "primary"
-                            }`}
-                          >
-                            <span className="d-none" aria-hidden="true">
-                              Rechercher{" "}
-                            </span>
-                            <i className="icons-search" aria-hidden="false" />
-                          </button>
                         </div>
                       </div>
                     </form>
@@ -465,15 +463,15 @@ export default function Manage({
             ) : (
               ""
             )}
-            {(!(
+            {!(
               user.perms.manage_ideas_all ||
               user.perms.manage_ideas_ambassador ||
               user.perms.manage_ideas_manager ||
               user.perms.manage_all
             ) &&
-              (page === "ideas" ||
-            page === "manager" ||
-            page === "ambassador")) ? (
+            (page === "ideas" ||
+              page === "manager" ||
+              page === "ambassador") ? (
               <Unauthorized />
             ) : (
               ""

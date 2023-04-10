@@ -164,25 +164,18 @@ router.delete(
 router.get("/ideas", ideaControllers.browse);
 router.get("/ideas/:id", ideaControllers.read);
 router.post("/ideas", validators.validateIdeaAtCreation, ideaControllers.add);
-router.delete("/ideas",
+router.delete(
+  "/ideas",
   auth.checkRight("manage_ideas_ambassador", "manage_ideas_all", "manage_all"),
-  ideaControllers.batchDestroy);
+  ideaControllers.batchDestroy
+);
 router.put("/ideas/:id", validators.validateIdeaAtModify, ideaControllers.edit);
 router.put(
   "/note/:id",
   validators.validateIdeaAtNotation,
   noteControllers.note
 );
-router.delete(
-  "/ideas/:id",
-  auth.checkRight(
-    "manage_ideas_manager",
-    "manage_ideas_ambassador",
-    "manage_ideas_all",
-    "manage_all"
-  ),
-  ideaControllers.destroy
-);
+router.delete("/ideas/:id", ideaControllers.destroy);
 
 // categories routes
 router.get("/categories", categorieControllers.browse);

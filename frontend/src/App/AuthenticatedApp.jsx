@@ -90,7 +90,7 @@ export default function AuthenticatedApp({
           }
         />
         <Route
-          path={`${import.meta.env.VITE_FRONTEND_URI}*`}
+          path={`${import.meta.env.VITE_FRONTEND_URI}/*`}
           element={<Error404 />}
         />
       </Routes>

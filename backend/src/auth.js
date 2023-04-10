@@ -10,7 +10,7 @@ const hashingParams = {
 const defPerms = {
   manage_ideas_manager: [],
   manage_ideas_ambassador: [],
-  manage_ideas_all : [],
+  manage_ideas_all: [],
   manage_challenges_ambassador: [],
   manage_challenges_all: [],
   manage_users: [],

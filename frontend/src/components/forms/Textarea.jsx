@@ -1,4 +1,4 @@
-/* eslint-disable */
+/* eslint-disable no-undef */
 import React, { useContext, useEffect, useRef } from "react";
 import { PropTypes } from "prop-types";
 import SharedContext from "../../contexts/sharedContext";
@@ -22,6 +22,10 @@ function Textarea({
   const editorDivRef = useRef(null);
   const { user, setIsLoading, isLoading } = useContext(SharedContext);
   const uploadToken = user.upload_token;
+  const keyEditor = "_editor";
+  const getEditor = (e) => {
+    return e[keyEditor];
+  };
   useEffect(() => {
     if (!editorRef.current && extraData) {
       window.assetsToReassign = [];
@@ -69,21 +73,19 @@ function Textarea({
           },
         })
         .then(() => {
+          const editor = getEditor(editorRef.current);
           setTimeout(() => {
-            editorRef.current._editor.setData(
-              editorRef.current._editor.sourceElement.dataset.value
-            );
+            editor.setData(editor.sourceElement.dataset.value);
           }, 500);
-          editorRef.current._editor.model.document.on("change:data", () =>
+          editor.model.document.on("change:data", () =>
             onChange({
-              target: { id, value: editorRef.current._editor.getData() },
+              target: { id, value: editor.getData() },
             })
           );
-          const fileRepo =
-            editorRef.current._editor.plugins.get("FileRepository");
-          fileRepo.on("change:uploaded", (e, n, v) => {
+          const fileRepo = editor.plugins.get("FileRepository");
+          fileRepo.on("change:uploaded", () => {
             const loader = fileRepo.loaders.last;
-            loader.on("change:uploadResponse", (e2, n2, value2, ov) => {
+            loader.on("change:uploadResponse", (_e, _n, value2) => {
               if (value2 && value2.id_asset) {
                 window.assetsToReassign.push(value2.id_asset);
                 setAssetsToReassign(window.assetsToReassign);
@@ -91,22 +93,16 @@ function Textarea({
               setIsLoading(false);
             });
           });
-          fileRepo.on(
-            "change:uploadedPercent",
-            (eventInfo, name, value2, oldValue) => {
-              if (!isLoading) {
-                setIsLoading(true);
-              }
+          fileRepo.on("change:uploadedPercent", () => {
+            if (!isLoading) {
+              setIsLoading(true);
             }
-          );
-          fileRepo.on(
-            "change:uploaded",
-            (eventInfo, name, value2, oldValue) => {
-              if (isLoading) {
-                setIsLoading(false);
-              }
+          });
+          fileRepo.on("change:uploaded", () => {
+            if (isLoading) {
+              setIsLoading(false);
             }
-          );
+          });
         })
         .catch(handleError);
     }
@@ -207,6 +203,7 @@ Textarea.propTypes = {
 Textarea.defaultProps = {
   label: "label",
   placeholder: "",
+  textAreaRef: null,
   value: "",
   className: "",
   required: false,
@@ -214,6 +211,7 @@ Textarea.defaultProps = {
   useAdvancedEditor: false,
   setAssetsToReassign: null,
   maxChars: null,
+  extraData: undefined,
 };
 
 export default Textarea;

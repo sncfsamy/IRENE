@@ -243,8 +243,8 @@ const logout = (req, res) => {
     .cookie("irene_auth", "", {
       maxAge: 0,
       httpOnly: true,
-      sameSite: true,
-      secure: false,
+      sameSite: "Strict",
+      secure: true,
       domain: process.env.COOKIE_DOMAIN,
     })
     .status(200)

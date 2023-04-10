@@ -48,16 +48,17 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
   }
   const havePerms = () => {
     return (
-      user.perms.manage_ideas_manager ||
-      user.perms.manage_ideas_ambassador ||
-      user.perms.manage_ideas_all ||
-      user.perms.manage_challenges ||
-      user.perms.manage_challenges_all ||
-      user.perms.manage_organisations ||
-      user.perms.manage_teams ||
-      user.perms.manage_roles ||
-      user.perms.manage_categories ||
-      user.perms.manage_all
+      user.perms &&
+      (user.perms.manage_ideas_manager ||
+        user.perms.manage_ideas_ambassador ||
+        user.perms.manage_ideas_all ||
+        user.perms.manage_challenges ||
+        user.perms.manage_challenges_all ||
+        user.perms.manage_organisations ||
+        user.perms.manage_teams ||
+        user.perms.manage_roles ||
+        user.perms.manage_categories ||
+        user.perms.manage_all)
     );
   };
   const click = (e) => {
@@ -153,8 +154,8 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
           aria-expanded="false"
           aria-controls="usercontrol"
         >
-          {user.firstname[0]}
-          {user.lastname[0]}
+          {user.firstname && user.firstname[0]}
+          {user.lastname && user.lastname[0]}
         </i>
         <div
           className="dropdown-menu dropdown-menu-right mt-4"

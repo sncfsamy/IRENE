@@ -393,7 +393,9 @@ export default function InnovationDisplay() {
       ideaData.authors.find((author) => author.is_author).id_user !==
         user.id_user &&
       (ideaData.idea.status === 0 || ideaData.idea.status === 4) &&
-      !perms.isManager && !perms.isAmbassador && !perms.isAdmin) ||
+      !perms.isManager &&
+      !perms.isAmbassador &&
+      !perms.isAdmin) ||
     !ideaData.idea ||
     !ideaData.idea.name ||
     ideaData.idea.name.length === 0

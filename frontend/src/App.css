@@ -292,6 +292,11 @@ a:hover,
   }
 }
 
+/* Innovation display */
+.popover::before {
+  background: transparent !important;
+}
+
 /* Manage pages */
 .dragscroll {
   overflow-x: scroll;

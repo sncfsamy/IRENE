@@ -1,5 +1,4 @@
-/* eslint-disable react/jsx-no-constructed-context-values */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BrowserRouter } from "react-router-dom";
 import ModalRgpd from "@components/ModalRgpd";
 import loader from "@assets/loading.webp";
@@ -209,21 +208,23 @@ function App() {
         setIsLoading(false);
       });
   }, [isLogged]);
+  const memoizedValues = useMemo(
+    () => ({
+      user,
+      categories,
+      organisations,
+      teams,
+      roles,
+      darkMode,
+      isLogged,
+      customFetch,
+      setIsLoading,
+    }),
+    [user, categories, organisations, teams, roles, darkMode, isLogged]
+  );
   return (
     <div className="App">
-      <SharedContext.Provider
-        value={{
-          customFetch,
-          user,
-          categories,
-          organisations,
-          teams,
-          roles,
-          darkMode,
-          setIsLoading,
-          isLogged,
-        }}
-      >
+      <SharedContext.Provider value={memoizedValues}>
         <BrowserRouter>
           {user ? (
             <AuthenticatedApp
