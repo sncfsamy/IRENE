@@ -273,7 +273,10 @@ export default function Roles({
         }
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item management-item-group">
+        <li
+          id="group1"
+          className="list-group-item management-item management-item-group"
+        >
           <div className="management-item-content management-item-group py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">

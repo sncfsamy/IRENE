@@ -83,7 +83,7 @@ class IdeaManager extends AbstractManager {
           )
         : " ORDER BY created_at DESC"
     }`;
-    
+
     return [
       this.database.query(`${query} LIMIT ? OFFSET ?`, sqlData),
       this.database.query(
