@@ -261,7 +261,12 @@ Selector.propTypes = {
       id_parent: PropTypes.number,
     })
   ),
-  errorMessages: PropTypes.arrayOf(PropTypes.string),
+  errorMessages: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string,
+      msg: PropTypes.string,
+    })
+  ),
 };
 Selector.defaultProps = {
   className: "",

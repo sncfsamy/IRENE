@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Selector from "@components/Selector";
 import FilesAndUploads from "@components/FilesAndUploads";
 import UserSearchSelect from "@components/UserSearchSelect";
-import Text from "../components/forms/Text";
+import Input from "../components/forms/Input";
 import sharedContext from "../contexts/sharedContext";
 import Textarea from "../components/forms/Textarea";
 
@@ -18,9 +18,9 @@ function InnovationEdit() {
     categories: [],
     coauthors: [],
   };
-  const [errorField, setErrorField] = useState();
+  const [errors, setErrors] = useState();
   const [idea, setIdea] = useState(defaultIdea);
-  const { darkMode, setIsLoading, categories, user, customFetch } =
+  const { darkMode, setIsLoading, categories, user, customFetch, addToast } =
     useContext(sharedContext);
   const [authorId, setAuthorId] = useState(user.id_user);
   const [assetsToReassign, setAssetsToReassign] = useState([]);
@@ -106,7 +106,7 @@ function InnovationEdit() {
     if (e) {
       e.preventDefault();
     }
-    setErrorField([]);
+    setErrors([]);
     const newIdea = { ...idea, problem, solution, gains };
     setIdea(newIdea);
     if (id) {
@@ -119,9 +119,18 @@ function InnovationEdit() {
       })
         .then((response) => {
           if (response.errors) {
-            setErrorField(response.errors);
+            setErrors(response.errors);
           }
           setIsLoading(false);
+          addToast({
+            title: "Innovation modifiée",
+            message: (
+              <div>
+                Vos modification de l'innovation <b>{newIdea.name}</b> ont bien
+                été enregistrées !
+              </div>
+            ),
+          });
           if (finished) {
             navigate(`${import.meta.env.VITE_FRONTEND_URI}/innovation/${id}`);
           }
@@ -138,7 +147,7 @@ function InnovationEdit() {
       })
         .then((response) => {
           if (response.errors) {
-            setErrorField(response.errors);
+            setErrors(response.errors);
             setIsLoading(false);
           } else {
             id = response.id;
@@ -147,6 +156,14 @@ function InnovationEdit() {
                 finished ? "innovation" : "edit"
               }/${id}`
             );
+            addToast({
+              title: "Innovation créée",
+              message: (
+                <div>
+                  Votre innovation <b>{newIdea.name}</b> a bien été crée !
+                </div>
+              ),
+            });
             setIsLoading(false);
           }
         })
@@ -164,14 +181,20 @@ function InnovationEdit() {
           user.id_organisation === idea.id_organisation))
     ) {
       customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`, "DELETE")
-        .then(() => {
-          setIsLoading(false);
-          navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
-        })
         .catch((error) => {
           console.error(error);
-          setIsLoading(false);
+        })
+        .finally(() => {
+          addToast({
+            title: "Innovation supprimée",
+            message: (
+              <div>
+                IRENE a oublié votre innovation <b>{idea.name}</b> !
+              </div>
+            ),
+          });
           navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
+          setIsLoading(false);
         });
     }
   };
@@ -189,9 +212,15 @@ function InnovationEdit() {
             navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
           } else {
             finished = dataIdea.idea.status !== 0 && dataIdea.idea.status !== 4;
+            let ideaCategories = [];
+            if (dataIdea.idea.categories) {
+              if (typeof dataIdea.idea.categories === "string")
+                ideaCategories = JSON.parse(dataIdea.idea.categories);
+              else ideaCategories = dataIdea.idea.categories;
+            }
             setIdea({
               ...dataIdea.idea,
-              categories: dataIdea.idea.categories ?? [],
+              categories: ideaCategories,
               coauthors: dataIdea.authors.filter((a) => !a.is_author),
             });
             setAuthorId(author.id_user ?? user.id_user);
@@ -251,10 +280,19 @@ function InnovationEdit() {
           setIsLoading(false);
           setIdeaAssets([...ideaAssets, newAsset]);
           setPoster(newAsset);
-          setErrorField([]);
+          setErrors([]);
+          addToast({
+            title: "Bannière mise à jour",
+            message: (
+              <div>
+                La bannière de votre innovation <b>{idea.name}</b> a été mise à
+                jour !
+              </div>
+            ),
+          });
         })
         .catch((err) => {
-          setErrorField([
+          setErrors([
             { msg: "Erreur lors du transfert.", param: "poster" },
             { msg: "Veuillez réessayer.", param: "poster" },
           ]);
@@ -285,7 +323,10 @@ function InnovationEdit() {
   return (
     <main className="container mx-auto my-3 p-0">
       <h1 className="display-1">
-        <i className="icons-document icons-size-3x mx-2" aria-hidden="true" />
+        <i
+          className="icons-large-lightbulb icons-size-3x mx-2"
+          aria-hidden="true"
+        />
         {id !== undefined ? (
           <>
             Edition de l'innovation <b>{idea.name}</b>
@@ -295,7 +336,7 @@ function InnovationEdit() {
         )}
       </h1>
       <form
-        className={`d-flex flex-column justify-content-center rounded w-100 p-0 pt-2 px-3 m-0 mb-2 ${
+        className={`d-flex flex-column justify-content-center rounded w-100 p-0 pt-3 px-3 m-0 mb-2 ${
           darkMode === 0 ? "bg-white" : ""
         }`}
         style={{
@@ -313,20 +354,18 @@ function InnovationEdit() {
         <div
           className={`${
             darkMode < 2 ? "bg-light" : "bg-dark"
-          } rounded pt-3 px-3 my-2`}
+          } rounded pt-3 px-3 mt-3 mb-2`}
         >
-          <Text
+          <Input
             label="Nom de l'innovation"
             id="name"
-            placeholder="Entrez le nom de votre innovation ici"
+            placeHolder="Entrez le nom de votre innovation ici"
             value={idea.name}
             onChange={handleChange}
             readonly={finished || idea.status > 0}
             required
             errorMessages={
-              errorField
-                ? errorField.filter((error) => error.param === "name")
-                : []
+              errors ? errors.filter((error) => error.param === "name") : []
             }
             maxChars="80"
           />
@@ -336,17 +375,17 @@ function InnovationEdit() {
             darkMode < 2 ? "bg-light" : "bg-dark"
           } rounded pt-3 px-3 my-2`}
         >
-          <Text
+          <Input
             label="Courte description"
             id="description"
-            placeholder="Entrez ici une courte description de votre innovation"
+            placeHolder="Entrez ici une courte description de votre innovation"
             value={idea.description}
             onChange={handleChange}
             required
             readonly={finished || idea.status > 0}
             errorMessages={
-              errorField
-                ? errorField.filter((error) => error.param === "description")
+              errors
+                ? errors.filter((error) => error.param === "description")
                 : []
             }
             maxChars="160"
@@ -389,8 +428,8 @@ function InnovationEdit() {
           )}
           <div
             className={`form-control-container ${
-              errorField &&
-              errorField.filter((error) => error.param === "poster").length
+              errors &&
+              errors.filter((error) => error.param === "poster").length
                 ? " is-invalid"
                 : ""
             }`}
@@ -422,14 +461,14 @@ function InnovationEdit() {
             id="poster_error"
             style={{
               display:
-                errorField &&
-                errorField.filter((error) => error.param === "poster").length
+                errors &&
+                errors.filter((error) => error.param === "poster").length
                   ? "block"
                   : "none",
             }}
           >
-            {errorField
-              ? errorField
+            {errors
+              ? errors
                   .filter((error) => error.param === "poster")
                   .map((err) => <div key={err.msg}>{err.msg}</div>)
               : ""}
@@ -454,9 +493,7 @@ function InnovationEdit() {
             extraData={{ id_idea: id, field: 1 }}
             setAssetsToReassign={setAssetsToReassignFromEditor}
             errorMessages={
-              errorField
-                ? errorField.filter((error) => error.param === "problem")
-                : []
+              errors ? errors.filter((error) => error.param === "problem") : []
             }
           />
           <FilesAndUploads
@@ -486,9 +523,7 @@ function InnovationEdit() {
             extraData={{ id_idea: id, field: 2 }}
             setAssetsToReassign={setAssetsToReassignFromEditor}
             errorMessages={
-              errorField
-                ? errorField.filter((error) => error.param === "solution")
-                : []
+              errors ? errors.filter((error) => error.param === "solution") : []
             }
           />
           <FilesAndUploads
@@ -518,9 +553,7 @@ function InnovationEdit() {
             extraData={{ id_idea: id, field: 3 }}
             setAssetsToReassign={setAssetsToReassignFromEditor}
             errorMessages={
-              errorField
-                ? errorField.filter((error) => error.param === "gains")
-                : []
+              errors ? errors.filter((error) => error.param === "gains") : []
             }
           />
           <FilesAndUploads
@@ -550,9 +583,7 @@ function InnovationEdit() {
             darkMode < 2 ? "bg-light" : "bg-gray-dark"
           } rounded p-3 my-2`}
           errorMessages={
-            errorField
-              ? errorField.filter((error) => error.param === "categories")
-              : []
+            errors ? errors.filter((error) => error.param === "categories") : []
           }
         />
         <div className="d-flex w-100 flex-column flex-md-row justify-content-center justify-content-md-end float-md-right m-0 py-3 width1">

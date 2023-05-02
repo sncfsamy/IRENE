@@ -67,7 +67,8 @@ export default function Select({
                 values.find((value) => value.id === selectedValue).name) ||
                 (values.find((value) => value.id === -1) &&
                   values.find((value) => value.id === -1).name) ||
-                values[0].name}
+                values[0]?.name ||
+                -1}
             </p>
             <select
               className="sr-only"

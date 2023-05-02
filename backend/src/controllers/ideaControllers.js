@@ -2,14 +2,6 @@ const path = require("path");
 const fs = require("fs");
 const models = require("../models");
 
-const orderingColumns = [
-  "created_at",
-  "finished_at",
-  "id_organisation",
-  "status",
-  "manager_validated_at",
-  "ambassador_validated_at",
-];
 const browse = async (req, res) => {
   const searchFilters = [];
   const orderParams = [];
@@ -73,7 +65,7 @@ const browse = async (req, res) => {
   }
   if (req.query.search_terms) {
     searchFilters.push({
-      column: "MATCH(i.name,i.description,i.problem,i.solution,i.gains)", // nécessite un index fulltext sur ces colonnes
+      column: "MATCH(i.name,i.description,i.problem,i.solution,i.gains)",
       value: req.query.search_terms,
       operator: "AGAINST(",
     });
@@ -134,10 +126,23 @@ const browse = async (req, res) => {
         60 * 60 * 24,
     });
   }
-
   if (req.query.order_by) {
-    const orderBy = req.query.order_by.split(",").map((e) => parseInt(e, 10));
-    const orders = req.query.order.split(",").map((e) => parseInt(e, 10));
+    const orderingColumns = [
+      "created_at",
+      "finished_at",
+      "id_organisation",
+      "status",
+      "manager_validated_at",
+      "ambassador_validated_at",
+    ];
+    const orderBy = req.query.order_by
+      .split(",")
+      .map((e) => parseInt(e, 10))
+      .filter((e) => !Number.isNaN(e));
+    const orders = req.query.order
+      .split(",")
+      .map((e) => parseInt(e, 10))
+      .filter((e) => !Number.isNaN(e));
     orderBy.forEach((columnIdx, i) => {
       if (orderingColumns[columnIdx])
         orderParams.push({
@@ -456,7 +461,6 @@ const edit = (req, res) => {
 
 const add = (req, res) => {
   const idea = req.body;
-  idea.user_id = req.payload.sub;
   idea.id_organisation = req.payload.organisation;
   const authors = [{ isAuthor: true, idUser: req.payload.sub }];
   if (req.body.coauthors && req.body.coauthors.length) {
@@ -507,8 +511,6 @@ const destroy = (req, res) => {
       if (
         author.id_user === req.payload.sub ||
         req.perms.manage_all ||
-        (req.perms.manage_ideas_manager &&
-          req.payload.team === author.id_team) ||
         (req.perms.manage_ideas_ambassador &&
           req.payload.organisation === author.id_organisation)
       ) {

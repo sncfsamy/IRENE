@@ -57,7 +57,7 @@ export default function IdeaList({
   return (
     <ul className="list-group">
       {setSelected ? (
-        <li className="list-group-item management-item">
+        <li className="list-group-item management-item management-item-group">
           <div className="management-item-content py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -164,12 +164,20 @@ export default function IdeaList({
                     );
                   }}
                 >
-                  <span className={`idea-status-${idea.status}`}>
+                  <span
+                    className={`w-100 badge badge-${
+                      idea.status === 0 || idea.status === 4 ? "info" : ""
+                    }${
+                      idea.status === 1 || idea.status === 2 ? "warning" : ""
+                    }${idea.status === 3 ? "success" : ""}${
+                      idea.status === 5 ? "danger" : ""
+                    }`}
+                  >
                     {status[idea.status]}&nbsp;
                   </span>
                 </div>
                 <div
-                  className="management-item-main text-break flex-column justify-content-center align-items-end col-sm-2"
+                  className="management-item-main text-break flex-column justify-content-center align-items-end col-sm-3"
                   aria-hidden="true"
                   onClick={() => {
                     $(".modal").modal("hide");

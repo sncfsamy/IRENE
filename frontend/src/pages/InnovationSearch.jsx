@@ -3,12 +3,13 @@ import { Link, useSearchParams } from "react-router-dom";
 import CategorieFilter from "@components/CategorieFilter";
 import OrganisationFilter from "@components/OrganisationFilter";
 import StatusFilter from "@components/StatusFilter";
+import Input from "@components/forms/Input";
 import Pagination from "@components/Pagination";
 import UserSearchSelect from "@components/UserSearchSelect";
 import Ordering from "@components/Ordering";
 import DatePicker from "../components/forms/DatePicker";
 import SharedContext from "../contexts/sharedContext";
-import defaultIdeaImg from "../assets/idea_default_picture.heif";
+import defaultIdeaImg from "../assets/idea_default_picture-150.heif";
 
 const dateOptions = {
   weekday: "long",
@@ -26,8 +27,8 @@ const status = [
 ];
 const statusColor = [
   "rgba(0,171,185,.6)",
-  "rgba(210,225,0,.6)",
-  "rgba(128,128,0,.6)",
+  "rgba(255,182,18,.6)",
+  "rgba(255,182,18,.6)",
   "rgba(130,190,0,.6)",
   "rgba(0,171,185,.6)",
   "rgba(205,0,55,.6)",
@@ -50,61 +51,96 @@ export default function InnovationSearch() {
     customFetch,
   } = useContext(SharedContext);
   const [searchParams, setSearchParams] = useSearchParams();
-  let newSearchFilter = initialSearchFilter;
+  const newSearchFilter = { ...initialSearchFilter };
   const [ideasData, setIdeasData] = useState(); // idées venant du back
   if (searchParams.has("page")) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      page: parseInt(searchParams.get("page"), 10),
-    };
+    newSearchFilter.page = parseInt(searchParams.get("page"), 10);
   } else searchParams.set("page", 1);
   if (searchParams.has("users") && searchParams.get("users").length) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      users: searchParams.get("users").split(","),
-    };
+    newSearchFilter.users = searchParams
+      .get("users")
+      .split(",")
+      .map((u) => parseInt(u, 10))
+      .filter((u) => !Number.isNaN(u));
   }
   if (searchParams.has("status") && searchParams.get("status").length) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      status: searchParams.get("status").split(","),
-    };
+    newSearchFilter.status = searchParams
+      .get("status")
+      .split(",")
+      .map((s) => parseInt(s, 10))
+      .filter((s) => !Number.isNaN(s));
   }
   if (
     searchParams.has("organisations") &&
     searchParams.get("organisations").length
   ) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      organisations: searchParams.get("organisations").split(","),
-    };
+    newSearchFilter.organisations = searchParams
+      .get("organisations")
+      .split(",");
   }
   if (searchParams.has("categories") && searchParams.get("categories").length) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      organisations: searchParams.get("categories").split(","),
-    };
+    newSearchFilter.organisations = searchParams.get("categories").split(",");
+  }
+  if (
+    searchParams.has("created_at_from") &&
+    searchParams.get("created_at_from")
+  ) {
+    newSearchFilter.created_at_from = searchParams.get("created_at_from");
+  }
+  if (searchParams.has("created_at_to") && searchParams.get("created_at_to")) {
+    newSearchFilter.created_at_to = searchParams.get("created_at_to");
+  }
+  if (
+    searchParams.has("finished_at_from") &&
+    searchParams.get("finished_at_from")
+  ) {
+    newSearchFilter.finished_at_from = searchParams.get("finished_at_from");
+  }
+  if (
+    searchParams.has("finished_at_to") &&
+    searchParams.get("finished_at_to")
+  ) {
+    newSearchFilter.finished_at_to = searchParams.get("finished_at_to");
+  }
+  if (
+    searchParams.has("manager_validated_at_from") &&
+    searchParams.get("manager_validated_at_from")
+  ) {
+    newSearchFilter.manager_validated_at_from = searchParams.get(
+      "manager_validated_at_from"
+    );
+  }
+  if (
+    searchParams.has("manager_validated_at_to") &&
+    searchParams.get("manager_validated_at_to")
+  ) {
+    newSearchFilter.manager_validated_at_to = searchParams.get(
+      "manager_validated_at_to"
+    );
+  }
+  if (
+    searchParams.has("ambassador_validated_at_from") &&
+    searchParams.get("ambassador_validated_at_from")
+  ) {
+    newSearchFilter.created_at_from = searchParams.get(
+      "ambassador_validated_at_from"
+    );
+  }
+  if (
+    searchParams.has("ambassador_validated_at_to") &&
+    searchParams.get("ambassador_validated_at_to")
+  ) {
+    newSearchFilter.ambassador_validated_at_to = searchParams.get(
+      "ambassador_validated_at_to"
+    );
   }
   if (searchParams.has("order_by") && searchParams.get("order_by").length) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      order_by: searchParams.get("order_by"),
-    };
-  } else
-    newSearchFilter = {
-      ...newSearchFilter,
-      order_by: 0,
-    };
+    newSearchFilter.order_by = searchParams.get("order_by");
+  } else newSearchFilter.order_by = 0;
   if (searchParams.has("order") && searchParams.get("order").length) {
-    newSearchFilter = {
-      ...newSearchFilter,
-      order: searchParams.get("order"),
-    };
-  } else
-    newSearchFilter = {
-      ...newSearchFilter,
-      order: 0,
-    };
+    newSearchFilter.order = searchParams.get("order");
+  } else newSearchFilter.order = 0;
+
   const [searchFilters, setSearchFilters] = useState(newSearchFilter); // filtres de recherche envoyés pour le get
   const [selectedUsers, setSelectedUsers] = useState([]); // utilisateurs sélectionnés pour le filtrage
   const noteStarOffColor = darkMode === 2 ? "text-light" : "text-dark";
@@ -115,8 +151,11 @@ export default function InnovationSearch() {
     setIsLoading(true);
     const cleanedSearchFilter = {};
     for (const param in searchFilters) {
-      if (searchFilters[param] && searchFilters[param].length)
+      if (searchFilters[param])
         cleanedSearchFilter[param] = searchFilters[param];
+    }
+    if (searchParams.get("page")) {
+      cleanedSearchFilter.page = searchParams.get("page");
     }
     const searchParamsConcatenated = new URLSearchParams({
       ...Object.fromEntries(searchParams),
@@ -150,7 +189,7 @@ export default function InnovationSearch() {
   };
   useEffect(() => {
     search();
-  }, [searchParams.get("page")]);
+  }, [searchParams]);
   const reset = () => {
     setSearchFilters(initialSearchFilter);
     setSelectedUsers([]);
@@ -262,9 +301,9 @@ export default function InnovationSearch() {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }, [searchFilters.page]);
   return (
-    <main className="container mx-auto px-3 mt-3">
+    <main className="container mx-auto px-3 my-3">
       <h1 className="display-1">
-        <i className="icons-document icons-size-3x mx-2" aria-hidden="true" />
+        <i className="icons-file icons-size-3x mx-2" aria-hidden="true" />
         Innovations
       </h1>
       <div className="row h-100">
@@ -296,6 +335,17 @@ export default function InnovationSearch() {
           <div>
             <form onSubmit={search} className="h-100">
               <section className="row-fluid h-50 mb-4">
+                <div className="row-fluid">
+                  <Input
+                    label="Recherche par mots-clés"
+                    type="text"
+                    placeHolder="Rechercher"
+                    id="search_terms"
+                    value={searchFilters.search_terms || ""}
+                    onChange={handleChangeSearchFilters}
+                  />
+                </div>
+
                 <div className="row-fluid">
                   <label htmlFor="user_id">Recherche par innovateur(s)</label>
                 </div>
@@ -431,25 +481,25 @@ export default function InnovationSearch() {
                   </section>
                 ) : undefined}
               </section>
+              <button
+                type="button"
+                className={`btn btn-${
+                  darkMode === 0 ? "warning" : "primary"
+                } float-right m-2`}
+                onClick={search}
+              >
+                <span>Rechercher/Filtrer </span>
+                <i className="icons-search" aria-hidden="false" />
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary float-right m-2"
+                onClick={reset}
+              >
+                <span>Réinitialiser </span>
+                <i className="icons-close" aria-hidden="false" />
+              </button>
             </form>
-            <button
-              type="button"
-              className={`btn btn-${
-                darkMode === 0 ? "warning" : "primary"
-              } float-right m-2`}
-              onClick={search}
-            >
-              <span>Rechercher/Filtrer </span>
-              <i className="icons-search" aria-hidden="false" />
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary float-right m-2"
-              onClick={reset}
-            >
-              <span>Réinitialiser </span>
-              <i className="icons-close" aria-hidden="false" />
-            </button>
           </div>
         </div>
       </div>

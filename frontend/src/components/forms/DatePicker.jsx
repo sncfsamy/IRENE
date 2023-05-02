@@ -68,12 +68,14 @@ function DatePicker({ label, id, onChange, value, className }) {
   if (targetdDate.getTime() === 0) {
     targetdDate = new Date(Date.now());
   }
+  if (!value) targetdDate = null;
   const [date, setDate] = useState(targetdDate);
   useEffect(() => {
     targetdDate = new Date(value ? value * 1000 : Date.now());
     if (targetdDate.getTime() === 0) {
       targetdDate = new Date(Date.now());
     }
+    if (!value) targetdDate = null;
     setDate(targetdDate);
   }, [value]);
   return (
@@ -101,7 +103,7 @@ function DatePicker({ label, id, onChange, value, className }) {
 DatePicker.propTypes = {
   label: PropTypes.string,
   id: PropTypes.string.isRequired,
-  value: PropTypes.number,
+  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   onChange: PropTypes.func.isRequired,
   className: PropTypes.string,
 };

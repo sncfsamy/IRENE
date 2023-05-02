@@ -17,19 +17,35 @@ class UserManager extends AbstractManager {
     let sql = initialSql;
     const sqlData = [];
     if (searchTerms && searchTerms.length) {
-      sql = `${initialSqlWithSearch}${details} WHERE MATCH(u.firstname,u.lastname) AGAINST(? IN NATURAL LANGUAGE MODE) OR MATCH(o.name) AGAINST(? IN NATURAL LANGUAGE MODE) AND MATCH(t.name) AGAINST(? IN NATURAL LANGUAGE MODE)`;
-      countSql = `${countSql} ${sql.replace(initialSqlWithSearch, "")}`;
-      sqlData.push(searchTerms);
-      sqlData.push(searchTerms);
-      sqlData.push(searchTerms);
-      sqlData.push(searchTerms);
-      sqlData.push(searchTerms);
+      sql = `${initialSqlWithSearch}${details} WHERE `;
+      countSql += `${details} WHERE `;
+      if (searchTerms.includes(" ")) {
+        const lastSpace = searchTerms.lastIndexOf(" ");
+        const firstName = searchTerms.substring(0, lastSpace);
+        const lastName = searchTerms.substring(lastSpace + 1);
+        sql += `(u.firstname LIKE ? AND u.lastname LIKE ?) OR (u.lastname LIKE ? AND u.firstname LIKE ?)`;
+        countSql += `(u.firstname LIKE ? AND u.lastname LIKE ?) OR (u.lastname LIKE ? AND u.firstname LIKE ?)`;
+        sqlData.push(`%${firstName}%`);
+        sqlData.push(`%${lastName}%`);
+        sqlData.push(`%${firstName}%`);
+        sqlData.push(`%${lastName}%`);
+      } else {
+        sql += ` ((MATCH(o.name) AGAINST(? IN NATURAL LANGUAGE MODE) AND MATCH(t.name) AGAINST(? IN NATURAL LANGUAGE MODE)) OR MATCH(u.firstname,u.lastname) AGAINST(? IN NATURAL LANGUAGE MODE)) OR u.firstname LIKE ? OR u.lastname LIKE ? OR o.name LIKE ? OR t.name LIKE ?`;
+        countSql += ` ((MATCH(o.name) AGAINST(? IN NATURAL LANGUAGE MODE) AND MATCH(t.name) AGAINST(? IN NATURAL LANGUAGE MODE)) OR MATCH(u.firstname,u.lastname) AGAINST(? IN NATURAL LANGUAGE MODE)) OR u.firstname LIKE ? OR u.lastname LIKE ? OR o.name LIKE ? OR t.name LIKE ?`;
+        sqlData.push(searchTerms);
+        sqlData.push(searchTerms);
+        sqlData.push(searchTerms);
+        sqlData.push(`%${searchTerms}%`);
+        sqlData.push(`%${searchTerms}%`);
+        sqlData.push(`%${searchTerms}%`);
+        sqlData.push(`%${searchTerms}%`);
+      }
     }
     const totalData = [...sqlData];
     sqlData.push(limit);
     sqlData.push(offset);
     return [
-      this.database.query(`${sql} LIMIT ${limit} OFFSET ${offset}`, sqlData),
+      this.database.query(`${sql} LIMIT ? OFFSET ?`, sqlData),
       this.database.query(
         searchTerms && searchTerms.length
           ? countSql
@@ -108,26 +124,6 @@ class UserManager extends AbstractManager {
         [`%${searchTerms}%`]
       ),
     ];
-  }
-
-  search(searchTerms) {
-    const initialSql = `SELECT u.firstname, u.lastname, u.id_user, u.id_organisation, u.id_team FROM ${this.table} AS u INNER JOIN ${this.join.organisation} AS o ON u.id_organisation = o.id_organisation INNER JOIN ${this.join.team} AS t ON u.id_team = t.id_team`;
-    const data = [];
-    searchTerms.split(" ").forEach((term) => {
-      data.push(`${term}`);
-    });
-    return this.database.query(
-      `${searchTerms
-        .split("s+")
-        .reduce(
-          (sql, _, i) =>
-            `${sql} ${
-              i === 0 ? "WHERE" : "OR"
-            } (MATCH(u.firstname,u.lastname,o.name,t.name) AGAINST(? IN NATURAL LANGUAGE MODE))`,
-          initialSql
-        )} LIMIT 5`,
-      data
-    );
   }
 
   getUserByRegistrationNumber(registrationNumber) {

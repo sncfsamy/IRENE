@@ -19,7 +19,7 @@ COLLATE = utf8mb4_general_ci;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `idea` (
   `id_idea` INT NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(160) NOT NULL,
+  `name` VARCHAR(80) NOT NULL,
   `description` VARCHAR(160) NULL DEFAULT NULL,
   `problem` MEDIUMTEXT NULL DEFAULT NULL,
   `solution` MEDIUMTEXT NULL DEFAULT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `firstname` VARCHAR(255) NOT NULL,
   `lastname` VARCHAR(255) NOT NULL,
   `password` VARCHAR(255) NOT NULL,
-  `registration_number` VARCHAR(45) NOT NULL,
+  `registration_number` VARCHAR(45) NOT NULL UNIQUE,
   `skills` VARCHAR(1024) NULL DEFAULT NULL,
   `mail` VARCHAR(255) NOT NULL,
   `mail_notification` TINYINT NULL DEFAULT '0',
@@ -114,17 +114,17 @@ CREATE TABLE IF NOT EXISTS `user` (
     FOREIGN KEY (`id_organisation`)
     REFERENCES `organisation` (`id_organisation`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE,
+    ON UPDATE NO ACTION,
   CONSTRAINT `fk_user_id_role`
     FOREIGN KEY (`id_role`)
     REFERENCES `role` (`id_role`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE,
+    ON UPDATE NO ACTION,
   CONSTRAINT `fk_user_id_team`
     FOREIGN KEY (`id_team`)
     REFERENCES `team` (`id_team`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_general_ci;
@@ -148,17 +148,17 @@ CREATE TABLE IF NOT EXISTS `comment` (
     FOREIGN KEY (`id_idea`)
     REFERENCES `idea` (`id_idea`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE,
+    ON UPDATE NO ACTION,
   CONSTRAINT `fk_comment_id_user`
     FOREIGN KEY (`id_user`)
     REFERENCES `user` (`id_user`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE,
+    ON UPDATE NO ACTION,
   CONSTRAINT `fk_comment_id_parent_comment`
     FOREIGN KEY (`id_parent_comment`)
     REFERENCES `comment` (`id_comment`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_general_ci;

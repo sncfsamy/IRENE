@@ -2,7 +2,7 @@ import PropTypes from "prop-types";
 import Select from "@components/forms/Select";
 import { useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import Text from "@components/forms/Text";
+import Input from "@components/forms/Input";
 import Pagination from "@components/Pagination";
 import SharedContext from "../../contexts/sharedContext";
 
@@ -25,8 +25,15 @@ export default function Users({
   const [addMode, setAddMode] = useState(false);
   const [notification, setNotification] = useState();
   const location = useLocation();
-  const { roles, organisations, teams, customFetch, darkMode, setIsLoading } =
-    useContext(SharedContext);
+  const {
+    roles,
+    organisations,
+    teams,
+    customFetch,
+    darkMode,
+    setIsLoading,
+    addToast,
+  } = useContext(SharedContext);
   const formatted = {
     roles: roles.map((role) => {
       return { ...role, id: role.id_role };
@@ -70,60 +77,82 @@ export default function Users({
     setSelectedUser(users.find((user) => user.id_user === userId));
   };
   const handleApply = () => {
-    setIsLoading(true);
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/users${
-        addMode ? "" : `/${selectedUser.id_user}`
-      }`,
-      addMode ? "POST" : "PUT",
-      userModification
-    )
-      .then((response) => {
-        setNotification({
-          success: true,
-          add: addMode,
-          user: userModification,
-        });
-        const newUsers = addMode ? [...users] : [];
-        let newElem = addMode
-          ? { ...userModification, id_user: response.id }
-          : {};
-        if (!addMode) {
-          for (let i = 0; i < users.length; i += 1) {
-            if (users[i].id_user === selectedUser.id_user) {
-              newUsers[i] = { ...users[i], ...userModification };
-              newElem = newUsers[i];
+    if (
+      addMode ||
+      userModification.id_organisation ||
+      userModification.id_role ||
+      userModification.id_team
+    ) {
+      setIsLoading(true);
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/users${
+          addMode ? "" : `/${selectedUser.id_user}`
+        }`,
+        addMode ? "POST" : "PUT",
+        userModification
+      )
+        .then((response) => {
+          if (response.errors) {
+            setErrors(response.errors);
+          } else {
+            setNotification({
+              success: true,
+              add: addMode,
+              user: userModification,
+            });
+            const newUsers = addMode ? [...users] : [];
+            let newElem = addMode
+              ? { ...userModification, id_user: response.id }
+              : {};
+            if (!addMode) {
+              for (let i = 0; i < users.length; i += 1) {
+                if (users[i].id_user === selectedUser.id_user) {
+                  newUsers[i] = { ...users[i], ...userModification };
+                  newElem = newUsers[i];
+                } else {
+                  newUsers[i] = users[i];
+                }
+              }
             } else {
-              newUsers[i] = users[i];
+              newUsers.push(newElem);
             }
+            setUsers(newUsers);
+            setLastChangedUser(newElem.id_user);
+            setUserModification({});
+            setCheckPassword("");
+            setSelectedUser();
+            setIsLoading(false);
+            setErrors([]);
+            $(".modal").modal("hide");
+            addToast({
+              title: addMode ? "Utilisateur créé" : "Utilisateur modifié",
+              message: (
+                <div>
+                  L'utilisateur{" "}
+                  <b>
+                    {newElem.firstname} {newElem.lastname}
+                  </b>{" "}
+                  a bien été {addMode ? "créé" : "modifié"} !
+                </div>
+              ),
+            });
           }
-        } else {
-          newUsers.push(newElem);
-        }
-        setUsers(newUsers);
-        setLastChangedUser(newElem.id_user);
-        setUserModification({});
-        setCheckPassword("");
-        setSelectedUser();
-        setIsLoading(false);
-        setErrors([]);
-      })
-      .catch((err) => {
-        if (err.errors) {
-          setErrors(err.errors);
-        }
-        if (addMode) {
-          setTimeout(() => {
-            setAddMode(true);
-            $("#actionModal").modal("show");
-          }, 500);
-        }
-        setNotification({});
-        setCheckPassword("");
-        setLastChangedUser();
-        setSelectedUser();
-        setIsLoading(false);
-      });
+        })
+        .catch(() => {
+          setNotification({});
+          setCheckPassword("");
+          setLastChangedUser();
+        })
+        .finally(() => {
+          setSelectedUser();
+          setIsLoading(false);
+        });
+    } else {
+      setNotification();
+      setCheckPassword("");
+      setLastChangedUser();
+      setSelectedUser();
+    }
   };
 
   useEffect(() => {
@@ -199,7 +228,7 @@ export default function Users({
         ...errors,
         {
           param: "checkpassword",
-          msg: "Les mots de passes ne correspondent pas.",
+          msg: "Les mots de passe ne correspondent pas.",
         },
       ]);
     } else if (userModification.password === checkPassword && errorShowed) {
@@ -261,7 +290,7 @@ export default function Users({
         total={total}
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item">
+        <li id="group1" className="list-group-item management-item management-item-group">
           <div className="management-item-content management-item-group py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -387,7 +416,7 @@ export default function Users({
             <div className="modal-body mb-4">
               {addMode ? (
                 <>
-                  <Text
+                  <Input
                     id="firstname"
                     value={
                       (userModification && userModification.firstname) || ""
@@ -395,11 +424,9 @@ export default function Users({
                     label="Prénom:"
                     onChange={handleChange}
                     required
-                    errorMessages={errors.filter(
-                      (error) => error.param === "firstname"
-                    )}
+                    errorMessages={errors}
                   />
-                  <Text
+                  <Input
                     id="lastname"
                     value={
                       (userModification && userModification.lastname) || ""
@@ -407,11 +434,9 @@ export default function Users({
                     label="Nom:"
                     onChange={handleChange}
                     required
-                    errorMessages={errors.filter(
-                      (error) => error.param === "lastname"
-                    )}
+                    errorMessages={errors}
                   />
-                  <Text
+                  <Input
                     id="registration_number"
                     value={
                       (userModification &&
@@ -421,22 +446,18 @@ export default function Users({
                     label="Matricule:"
                     onChange={handleChange}
                     required
-                    errorMessages={errors.filter(
-                      (error) => error.param === "registration_number"
-                    )}
+                    errorMessages={errors}
                   />
-                  <Text
+                  <Input
                     id="mail"
                     value={(userModification && userModification.mail) || ""}
                     type="email"
                     label="Adresse mail:"
                     onChange={handleChange}
                     required
-                    errorMessages={errors.filter(
-                      (error) => error.param === "registration_number"
-                    )}
+                    errorMessages={errors}
                   />
-                  <Text
+                  <Input
                     id="password"
                     type="password"
                     value={
@@ -445,22 +466,24 @@ export default function Users({
                     label="Mot de passe:"
                     onChange={handleChange}
                     required
-                    errorMessages={errors.filter(
-                      (error) =>
-                        error.param === "password" ||
-                        error.param === "checkpassword"
-                    )}
+                    errorMessages={errors
+                      .filter(
+                        (error) =>
+                          error.param === "password" ||
+                          error.param === "checkpassword"
+                      )
+                      .map((error) => {
+                        return { param: "password", msg: error.msg };
+                      })}
                   />
-                  <Text
+                  <Input
                     id="checkpassword"
                     type="password"
                     label="Vérification du mot de passe:"
                     value={checkPassword}
                     onChange={(e) => setCheckPassword(e.target.value)}
                     required
-                    errorMessages={errors.filter(
-                      (error) => error.param === "checkpassword"
-                    )}
+                    errorMessages={errors}
                   />
                 </>
               ) : (
@@ -574,7 +597,6 @@ export default function Users({
                 type="button"
                 onClick={handleApply}
                 className={`btn btn-${darkMode === 0 ? "warning" : "primary"}`}
-                data-dismiss="modal"
                 disabled={
                   addMode
                     ? userModification.password !== checkPassword ||

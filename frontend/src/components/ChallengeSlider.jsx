@@ -9,49 +9,55 @@ window.currDot = null;
 window.prevDot = null;
 window.intrvl = null;
 window.timeout = null;
+window.prevImg = null;
+window.currImg = 0;
+window.allDots = [];
 export default function ChallengesSlider({ challenges }) {
-  const interval = 15000;
-  const animDuration = 600;
+  const interval = 7000;
+  const animDuration = 700;
   const slider = useRef();
   useEffect(() => {
     const dots = slider.current.querySelector(".dots");
     const sliderImgs = slider.current.querySelectorAll(".challengePoster");
-    let currImg = 0;
-    let prevImg = sliderImgs.length - 1;
-    let allDots = [];
+    if (!window.prevImg) {
+      window.prevImg = sliderImgs.length - 1;
+      window.currImg = 0;
+      window.allDots = [];
+    }
 
     function animateSlider(incNextImg, right) {
       let nextImg = incNextImg;
       if (!nextImg) {
-        nextImg = currImg + 1 < sliderImgs.length ? currImg + 2 : 1;
+        nextImg =
+          window.currImg + 1 < sliderImgs.length ? window.currImg + 2 : 1;
       }
 
       nextImg -= 1;
-      sliderImgs[prevImg].style.animationName = "";
+      sliderImgs[window.prevImg].style.animationName = "";
 
       if (!right) {
         sliderImgs[nextImg].style.animationName = "leftNext";
-        sliderImgs[currImg].style.animationName = "leftCurr";
+        sliderImgs[window.currImg].style.animationName = "leftCurr";
       } else {
         sliderImgs[nextImg].style.animationName = "rightNext";
-        sliderImgs[currImg].style.animationName = "rightCurr";
+        sliderImgs[window.currImg].style.animationName = "rightCurr";
       }
 
-      prevImg = currImg;
-      currImg = nextImg;
+      window.prevImg = window.currImg;
+      window.currImg = nextImg;
 
-      window.currDot = allDots[currImg];
+      window.currDot = window.allDots[window.currImg];
       window.currDot.classList.add("active-dot");
-      window.prevDot = allDots[prevImg];
+      window.prevDot = window.allDots[window.prevImg];
       window.prevDot.classList.remove("active-dot");
     }
 
     function dotClick(num) {
-      if (num !== currImg) {
+      if (num !== window.currImg) {
         clearTimeout(window.timeout);
         clearInterval(window.intrvl);
 
-        if (num > currImg) {
+        if (num > window.currImg) {
           animateSlider(num + 1);
         } else {
           animateSlider(num + 1, true);
@@ -61,20 +67,21 @@ export default function ChallengesSlider({ challenges }) {
       }
     }
 
+    window.allDots = dots.querySelectorAll(".dot");
+    window.allDots.forEach((element) => element.remove());
     for (let i = 0; i < sliderImgs.length; i += 1) {
       const dot = document.createElement("div");
       dot.classList.add("dot");
       dots.appendChild(dot);
       dot.addEventListener("click", dotClick.bind(null, i), false);
     }
-    allDots = dots.querySelectorAll(".dot");
-    dots.querySelectorAll(".dot").forEach((element) => element.remove());
+    window.allDots = dots.querySelectorAll(".dot");
 
-    if (allDots.length) {
-      allDots[0].classList.add("active-dot");
+    if (window.allDots.length) {
+      window.allDots[0].classList.add("active-dot");
 
       sliderImgs[0].style.left = 0;
-      if (allDots.length > 1) {
+      if (window.allDots.length > 1) {
         window.timeout = setTimeout(() => {
           animateSlider();
           sliderImgs[0].style.left = "";
@@ -89,6 +96,9 @@ export default function ChallengesSlider({ challenges }) {
       window.intrvl = undefined;
       window.currDot = undefined;
       window.prevDot = undefined;
+      window.currImg = undefined;
+      window.prevImg = undefined;
+      window.allDots = undefined;
     };
   }, [challenges]);
   return (

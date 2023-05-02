@@ -73,7 +73,7 @@ const hashPassword = (req, res, next) => {
       next();
     })
     .catch((err) => {
-      console.warn("Hshing password error: ", err);
+      console.warn("Hashing password error: ", err);
       res.sendStatus(500);
     });
 };
@@ -128,7 +128,7 @@ const renewToken = (req, res) => {
       maxAge: parseInt(process.env.TOKEN_RENEWAL_VALIDITY, 10) * 1000,
       httpOnly: true,
       sameSite: "Strict",
-      secure: true,
+      secure: false,
       domain: process.env.COOKIE_DOMAIN,
     });
     res.sendStatus(200);
@@ -194,7 +194,7 @@ const verifyToken = (req, res, next) => {
               maxAge: 0,
               httpOnly: true,
               sameSite: "Strict",
-              secure: true,
+              secure: false,
               domain: process.env.COOKIE_DOMAIN,
             })
             .status(401)

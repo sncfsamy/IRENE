@@ -79,10 +79,10 @@ export default function Ordering({
     setOrder(filterOrders);
   }, [searchFilters.get("order_by"), searchFilters.get("order")]);
   return (
-    <div className="d-flex justify-content-center align-items-center mt-3">
+    <div className="row mt-3 px-3 mx-auto">
       {orderElements.map((element, i) => (
-        <span key={element}>
-          <h6 className="d-inline">
+        <div key={element} className="mx-2 d-inline col-">
+          <h6>
             <button
               type="button"
               className="btn btn-link"
@@ -105,7 +105,7 @@ export default function Ordering({
             </button>
           </h6>
           &nbsp; &nbsp;
-        </span>
+        </div>
       ))}
     </div>
   );

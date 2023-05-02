@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { useContext, useEffect, useState } from "react";
 import SharedContext from "../contexts/sharedContext";
+import Input from "./forms/Input";
 
 export default function UserSearchSelect({ users, setUsers, label }) {
   const { darkMode, customFetch } = useContext(SharedContext);
@@ -86,54 +87,73 @@ export default function UserSearchSelect({ users, setUsers, label }) {
   };
 
   return (
-    <div
-      className={`${
-        darkMode < 2 ? "bg-light" : "bg-dark"
-      } rounded pt-3 px-3 my-2`}
-    >
-      <div className="row-fluid h-10 ">
-        {label ? <label htmlFor="users">{label}</label> : ""}
+    <div className={`${darkMode < 2 ? "bg-light" : "bg-dark"} rounded`}>
+      <div className="row-fluid h-10 my-0 py-0">
+        {label ? (
+          <label htmlFor="users" className="px-3 pt-3">
+            {label}
+          </label>
+        ) : (
+          ""
+        )}
+        <div className="d-flex flex-row" data-role="add">
+          <Input
+            label=""
+            type="text"
+            placeHolder="Saisir le nom d’un agent à rechercher"
+            id="search_terms"
+            withClearButton
+            className="clear-option"
+            formGroupClassName="w-100 m-0 p-0"
+            labelClassName="sr-only"
+            value={searchUserValue}
+            onChange={handleUserSearch}
+          />
+        </div>
         {selectedUsers && selectedUsers.length ? (
-          <div
-            className="form-control-container form-chips-container"
-            style={{ backgroundColor: "transparent" }}
-            data-component="chips"
-          >
-            {selectedUsers.map((u) => (
-              <div className="chips-group mb-2" key={u.id_user}>
-                <span
-                  className={`chips chips-label bg-${
-                    darkMode === 0 ? "warning" : "primary"
-                  }`}
-                >
-                  {u.firstname} {u.lastname} &nbsp;
-                </span>
-                <button
-                  type="button"
-                  className={`chips chips-btn chips-only-icon bg-${
-                    darkMode === 0 ? "warning" : "primary"
-                  }`}
-                  data-value={u.id_user}
-                  onClick={handleUserDeselect}
-                >
+          <>
+            <div
+              className="form-control-container form-chips-container p-3"
+              style={{ backgroundColor: "transparent" }}
+              data-component="chips"
+            >
+              {selectedUsers.map((u) => (
+                <div className="chips-group" key={u.id_user}>
                   <span
-                    className={`sr-only bg-${
+                    className={`chips chips-label bg-${
                       darkMode === 0 ? "warning" : "primary"
                     }`}
                   >
-                    Supprimer {u.firstname} {u.lastname}
+                    {u.firstname} {u.lastname} &nbsp;
                   </span>
-                  <i
-                    className={`icons-close bg-${
+                  <button
+                    type="button"
+                    className={`chips chips-btn chips-only-icon bg-${
                       darkMode === 0 ? "warning" : "primary"
                     }`}
-                    aria-hidden="true"
                     data-value={u.id_user}
                     onClick={handleUserDeselect}
-                  />
-                </button>
-              </div>
-            ))}
+                  >
+                    <span
+                      className={`sr-only bg-${
+                        darkMode === 0 ? "warning" : "primary"
+                      }`}
+                    >
+                      Supprimer {u.firstname} {u.lastname}
+                    </span>
+                    <i
+                      className={`icons-close bg-${
+                        darkMode === 0 ? "warning" : "primary"
+                      }`}
+                      aria-hidden="true"
+                      data-value={u.id_user}
+                      onClick={handleUserDeselect}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+
             <label
               className="font-weight-medium mb-2 sr-only"
               htmlFor="receivers2"
@@ -148,15 +168,19 @@ export default function UserSearchSelect({ users, setUsers, label }) {
               aria-hidden="true"
               multiple
             />
-          </div>
+          </>
         ) : (
           ""
         )}
       </div>
-      <div className="row-fluid  pb-5">
-        <div className="flex-fluid overflow-y" role="list" data-role="menu">
-          {userSearchResults &&
-            userSearchResults.map((u) => (
+      <div className="row-fluid">
+        {userSearchResults && userSearchResults.length ? (
+          <div
+            className="flex-fluid overflow-y p-3"
+            role="list"
+            data-role="menu"
+          >
+            {userSearchResults.map((u) => (
               <span
                 className="select-menu-item"
                 role="listitem"
@@ -191,25 +215,10 @@ export default function UserSearchSelect({ users, setUsers, label }) {
                 </div>
               </span>
             ))}
-        </div>
-        <div className="d-flex pt-4 flex-row" data-role="add">
-          <div className="form-control-container w-100">
-            <label htmlFor="id_user" className="sr-only">
-              Saisir le nom d’un agent à rechercher
-            </label>
-            <input
-              id="id_user"
-              type="text"
-              className="form-control form-control"
-              data-role="add-input"
-              placeholder="Saisir le nom d’un agent à rechercher"
-              value={searchUserValue}
-              onChange={handleUserSearch}
-              autoComplete="off"
-            />
-            <span className="form-control-state" />
           </div>
-        </div>
+        ) : (
+          ""
+        )}
       </div>
     </div>
   );

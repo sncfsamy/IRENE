@@ -118,6 +118,8 @@ const edit = (req, res) => {
     (req.body.challengers &&
       req.body.challengers.filter((challenger) => challenger.winner)) ||
     [];
+  models.challenger.resetSelectedsAndWinners(id);
+
   if (selecteds.length)
     models.challenger.setSelecteds(
       selecteds.map((challenger) => challenger.id_idea),

@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useContext, useEffect, useState } from "react";
-import Text from "@components/forms/Text";
+import Input from "@components/forms/Input";
 import Pagination from "@components/Pagination";
 import { useLocation } from "react-router-dom";
 import SharedContext from "../../contexts/sharedContext";
@@ -20,11 +20,18 @@ export default function Organisations({
   const [lastChangedOrganisation, setLastChangedOrganisation] = useState();
   const [organisationModification, setOrganisationModification] = useState({});
   const [filteredOrganisations, setFilteredOrganisations] = useState([]);
+  const [errors, setErrors] = useState([]);
   const [addMode, setAddMode] = useState(false);
   const [notification, setNotification] = useState();
   const location = useLocation();
-  const { organisations, teams, customFetch, darkMode, setIsLoading } =
-    useContext(SharedContext);
+  const {
+    organisations,
+    teams,
+    customFetch,
+    darkMode,
+    setIsLoading,
+    addToast,
+  } = useContext(SharedContext);
   const handleChange = (e) => {
     setOrganisationModification({
       ...organisationModification,
@@ -59,55 +66,75 @@ export default function Organisations({
     if (e) {
       e.preventDefault();
     }
-    setIsLoading(true);
-    const inAddMode = addMode;
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/organisations${
-        inAddMode ? "" : `/${selectedOrganisation.id_organisation}`
-      }`,
-      inAddMode ? "POST" : "PUT",
-      organisationModification
-    )
-      .then((response) => {
-        setNotification({
-          success: true,
-          organisation: organisationModification,
-        });
-        const newElems = inAddMode ? [...organisations] : [];
-        let newOrganisation = inAddMode
-          ? { ...organisationModification, id_organisation: response.id }
-          : {};
-        if (!inAddMode) {
-          for (let i = 0; i < organisations.length; i += 1) {
-            if (
-              organisations[i].id_organisation ===
-              selectedOrganisation.id_organisation
-            ) {
-              newElems[i] = {
-                ...organisations[i],
-                ...organisationModification,
-              };
-              newOrganisation = newElems[i];
+    if (addMode || organisationModification.name) {
+      setIsLoading(true);
+      const inAddMode = addMode;
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/organisations${
+          inAddMode ? "" : `/${selectedOrganisation.id_organisation}`
+        }`,
+        inAddMode ? "POST" : "PUT",
+        organisationModification
+      )
+        .then((response) => {
+          if (response.errors) {
+            setErrors(response.errors);
+          } else {
+            setNotification({
+              success: true,
+              organisation: organisationModification,
+            });
+            const newElems = inAddMode ? [...organisations] : [];
+            let newOrganisation = inAddMode
+              ? { ...organisationModification, id_organisation: response.id }
+              : {};
+            if (!inAddMode) {
+              for (let i = 0; i < organisations.length; i += 1) {
+                if (
+                  organisations[i].id_organisation ===
+                  selectedOrganisation.id_organisation
+                ) {
+                  newElems[i] = {
+                    ...organisations[i],
+                    ...organisationModification,
+                  };
+                  newOrganisation = newElems[i];
+                } else {
+                  newElems[i] = organisations[i];
+                }
+              }
             } else {
-              newElems[i] = organisations[i];
+              newElems.push(newOrganisation);
             }
+            setOrganisations(newElems);
+            setLastChangedOrganisation(newOrganisation.id_organisation);
+            setOrganisationModification({});
+            $(".modal").modal("hide");
+            addToast({
+              title: addMode ? "Organisation créée" : "Organisation modifiée",
+              message: (
+                <div>
+                  L'organisation <b>{newOrganisation.name}</b> a bien été{" "}
+                  {addMode ? "créée" : "modifiée"} !
+                </div>
+              ),
+            });
           }
-        } else {
-          newElems.push(newOrganisation);
-        }
-        setOrganisations(newElems);
-        setLastChangedOrganisation(newOrganisation.id_organisation);
-        setSelectedOrganisation();
-        setOrganisationModification({});
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setNotification({});
-        setLastChangedOrganisation();
-        setSelectedOrganisation();
-        setIsLoading(false);
-      });
+        })
+        .catch((err) => {
+          console.error(err);
+          setNotification({});
+          setLastChangedOrganisation();
+        })
+        .finally(() => {
+          setSelectedOrganisation();
+          setIsLoading(false);
+        });
+    } else {
+      setNotification();
+      setLastChangedOrganisation();
+      setSelectedOrganisation();
+    }
   };
 
   useEffect(() => {
@@ -217,7 +244,7 @@ export default function Organisations({
         }
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item">
+        <li id="group1" className="list-group-item management-item management-item-group">
           <div className="management-item-content management-item-group py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -265,7 +292,7 @@ export default function Organisations({
                 <span className="sr-only">
                   Nombre d'innovations de l'organisation
                 </span>
-                <i className="icons-document" />
+                <i className="icons-file" />
               </button>
             </div>
             <div className="management-item-symbol text-left col-1">
@@ -381,12 +408,12 @@ export default function Organisations({
             </div>
             <form onSubmit={handleApply}>
               <div className="modal-body mt-3 mb-n3">
-                <Text
+                <Input
                   label="Nom"
                   required
-                  placeholder="Entrez le nom de l'entité ici"
+                  placeHolder="Entrez le nom de l'entité ici"
                   maxChars="255"
-                  errorMessages={[]}
+                  errorMessages={errors}
                   id="organisation"
                   value={
                     addMode
@@ -418,7 +445,10 @@ export default function Organisations({
                   className={`btn btn-${
                     darkMode === 0 ? "warning" : "primary"
                   }`}
-                  data-dismiss="modal"
+                  disabled={
+                    !organisationModification?.name &&
+                    !selectedOrganisation?.name
+                  }
                 >
                   {addMode ? "Créer" : "Appliquer les modifications"}
                 </button>

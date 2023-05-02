@@ -1,3 +1,4 @@
+/* adapted from https://codepen.io/Snip3r/pen/GxybbN */
 .challengesSlider,
 .challengesSlider .challenges {
   width: 100%;
@@ -10,7 +11,7 @@
 }
 
 .challengesSlider {
-  height: 75%;
+  height: 85%;
   max-height: 300px;
 }
 

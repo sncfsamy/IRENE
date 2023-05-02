@@ -12,18 +12,25 @@ class ChallengerManager extends AbstractManager {
     );
   }
 
-  setSelecteds(idIdeas, idChallenge, state) {
+  resetSelectedsAndWinners(idChallenge) {
     return this.database.query(
-      `UPDATE ${this.table} SET selected = ?, winner = 0 WHERE ${
+      `UPDATE ${this.table} SET selected = 0, winner = 0 WHERE ${this.id} = ?`,
+      [idChallenge]
+    );
+  }
+
+  setSelecteds(idIdeas, idChallenge) {
+    return this.database.query(
+      `UPDATE ${this.table} SET selected = 1 WHERE ${
         this.id
       } = ? AND id_idea IN (${idIdeas.join(",")})`,
-      [state, idChallenge]
+      [idChallenge]
     );
   }
 
   setWinners(idIdeas, idChallenge) {
     return this.database.query(
-      `UPDATE ${this.table} SET winner = 1 WHERE ${
+      `UPDATE ${this.table} SET selected = 1, winner = 1 WHERE ${
         this.id
       } = ? AND id_idea IN (${idIdeas.join(",")})`,
       [idChallenge]

@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useContext, useEffect, useState } from "react";
-import Text from "@components/forms/Text";
+import Input from "@components/forms/Input";
 import Select from "@components/forms/Select";
 import Pagination from "@components/Pagination";
 import { useLocation } from "react-router-dom";
@@ -21,9 +21,10 @@ export default function Categories({
   const [categorieModification, setCategorieModification] = useState({});
   const [filteredCategories, setFilteredCategories] = useState([]);
   const [addMode, setAddMode] = useState(false);
+  const [errors, setErrors] = useState([]);
   const [notification, setNotification] = useState();
   const location = useLocation();
-  const { categories, customFetch, darkMode, setIsLoading } =
+  const { categories, customFetch, darkMode, setIsLoading, addToast } =
     useContext(SharedContext);
   const selectAll = () => {
     if (selected.length === categories.length) {
@@ -76,57 +77,87 @@ export default function Categories({
     if (e) {
       e.preventDefault();
     }
-    setIsLoading(true);
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/categories${
-        addMode ? "" : `/${selectedCategorie.id_categorie}`
-      }`,
-      addMode ? "POST" : "PUT",
-      categorieModification
-    )
-      .then((response) => {
-        setNotification({
-          success: true,
-          add: addMode,
-          categorie: categorieModification,
-        });
-        const newElems = addMode ? [...categories] : [];
-        let newCategorie = addMode
-          ? { ...categorieModification, id_categorie: response.id }
-          : {};
-        if (!addMode) {
-          for (let i = 0; i < categories.length; i += 1) {
-            if (categories[i].id_categorie === selectedCategorie.id_categorie) {
-              newElems[i] = { ...categories[i], ...categorieModification };
-              newCategorie = newElems[i];
+    if (
+      addMode ||
+      categorieModification.name ||
+      categorieModification.id_parent_categorie
+    ) {
+      setIsLoading(true);
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/categories${
+          addMode ? "" : `/${selectedCategorie.id_categorie}`
+        }`,
+        addMode ? "POST" : "PUT",
+        categorieModification
+      )
+        .then((response) => {
+          if (response.errors) {
+            setErrors(response.errors);
+          } else {
+            setNotification({
+              success: true,
+              add: addMode,
+              categorie: categorieModification,
+            });
+            const newElems = addMode ? [...categories] : [];
+            let newCategorie = addMode
+              ? { ...categorieModification, id_categorie: response.id }
+              : {};
+            if (!addMode) {
+              for (let i = 0; i < categories.length; i += 1) {
+                if (
+                  categories[i].id_categorie === selectedCategorie.id_categorie
+                ) {
+                  newElems[i] = { ...categories[i], ...categorieModification };
+                  newCategorie = newElems[i];
+                } else {
+                  newElems[i] = categories[i];
+                }
+              }
             } else {
-              newElems[i] = categories[i];
+              newElems.push(newCategorie);
             }
+            setCategories(
+              newElems.map((cat) => {
+                return {
+                  ...cat,
+                  id_parent_categorie:
+                    cat.id_parent_categorie === -1
+                      ? null
+                      : cat.id_parent_categorie,
+                };
+              })
+            );
+            setLastChangedCategorie(newCategorie.id_categorie);
+            setSelectedCategorie({});
+            setCategorieModification({});
+            setIsLoading(false);
+            $(".modal").modal("hide");
+            addToast({
+              title: addMode ? "Catégorie créée" : "Catégorie modifiée",
+              message: (
+                <div>
+                  La catégorie <b>{newCategorie.name}</b> a bien été{" "}
+                  {addMode ? "créée" : "modifiée"} !
+                </div>
+              ),
+            });
           }
-        } else {
-          newElems.push(newCategorie);
-        }
-        setCategories(
-          newElems.map((cat) => {
-            return {
-              ...cat,
-              id_parent_categorie:
-                cat.id_parent_categorie === -1 ? null : cat.id_parent_categorie,
-            };
-          })
-        );
-        setLastChangedCategorie(newCategorie.id_categorie);
-        setSelectedCategorie({});
-        setCategorieModification({});
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setNotification({});
-        setLastChangedCategorie();
-        setSelectedCategorie({});
-        setIsLoading(false);
-      });
+        })
+        .catch((err) => {
+          console.error(err);
+          setNotification({});
+          setLastChangedCategorie();
+        })
+        .finally(() => {
+          setSelectedCategorie({});
+          setIsLoading(false);
+        });
+    } else {
+      setNotification();
+      setLastChangedCategorie();
+      setSelectedCategorie({});
+    }
   };
 
   useEffect(() => {
@@ -237,7 +268,7 @@ export default function Categories({
         }
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item">
+        <li id="group1" className="list-group-item management-item management-item-group">
           <div className="management-item-content py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -288,7 +319,7 @@ export default function Categories({
                 data-content="Nombre d'innovations associées à cette catégorie."
               >
                 <span className="sr-only">Cliquez pour plus d'information</span>
-                <i className="icons-document" />
+                <i className="icons-file" />
               </button>
             </div>
           </div>
@@ -297,7 +328,7 @@ export default function Categories({
           filteredCategories.map((categorie) => (
             <li
               id="group1"
-              className={`list-group-item management-item ${
+              className={`list-group-item management-item management-item-group ${
                 lastChangedCategorie === categorie.id_categorie
                   ? "last-changed"
                   : ""
@@ -407,12 +438,12 @@ export default function Categories({
             </div>
             <form onSubmit={handleApply}>
               <div className="modal-body mt-3">
-                <Text
+                <Input
                   label="Nom"
                   required
-                  placeholder="Entrez le nom de l'équipe ici"
+                  placeHolder="Entrez le nom de l'équipe ici"
                   maxChars="255"
-                  errorMessages={[]}
+                  errorMessages={errors}
                   id="name"
                   value={
                     addMode
@@ -459,7 +490,9 @@ export default function Categories({
                   className={`btn btn-${
                     darkMode === 0 ? "warning" : "primary"
                   }`}
-                  data-dismiss="modal"
+                  disabled={
+                    !categorieModification?.name && !selectedCategorie?.name
+                  }
                 >
                   {addMode ? "Créer" : "Appliquer les modifications"}
                 </button>

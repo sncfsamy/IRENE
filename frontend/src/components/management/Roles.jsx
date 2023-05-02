@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useContext, useEffect, useState } from "react";
-import Text from "@components/forms/Text";
+import Input from "@components/forms/Input";
 import Selector from "@components/Selector";
 import Pagination from "@components/Pagination";
 import { useLocation } from "react-router-dom";
@@ -21,10 +21,11 @@ export default function Roles({
   const [roleModification, setRoleModification] = useState({});
   const [filteredRoles, setFilteredRoles] = useState([]);
   const [addMode, setAddMode] = useState(false);
+  const [errors, setErrors] = useState([]);
   const [rolePermissions, setRolePermissions] = useState([]);
   const [notification, setNotification] = useState();
   const location = useLocation();
-  const { roles, customFetch, darkMode, setIsLoading } =
+  const { roles, customFetch, darkMode, setIsLoading, addToast } =
     useContext(SharedContext);
   const permissions = [
     { id: "manage_ideas_manager", name: "Valideur des idées de son équipe" },
@@ -100,49 +101,73 @@ export default function Roles({
     if (e) {
       e.preventDefault();
     }
-    setIsLoading(true);
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/roles${
-        addMode ? "" : `/${selectedRole.id_role}`
-      }`,
-      addMode ? "POST" : "PUT",
-      roleModification
-    )
-      .then((response) => {
-        setNotification({
-          success: true,
-          add: addMode,
-          role: roleModification,
-        });
-        const newElems = addMode ? [...roles] : [];
-        let newRole = addMode
-          ? { ...roleModification, id_role: response.id }
-          : {};
-        if (!addMode) {
-          for (let i = 0; i < roles.length; i += 1) {
-            if (roles[i].id_role === selectedRole.id_role) {
-              newElems[i] = { ...roles[i], ...roleModification };
-              newRole = newElems[i];
+    if (
+      addMode ||
+      roleModification.name ||
+      permissions.find((perm) => roleModification[perm.id])
+    ) {
+      setIsLoading(true);
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/roles${
+          addMode ? "" : `/${selectedRole.id_role}`
+        }`,
+        addMode ? "POST" : "PUT",
+        roleModification
+      )
+        .then((response) => {
+          if (response.errors) {
+            setErrors(response.errors);
+          } else {
+            setNotification({
+              success: true,
+              add: addMode,
+              role: roleModification,
+            });
+            const newElems = addMode ? [...roles] : [];
+            let newRole = addMode
+              ? { ...roleModification, id_role: response.id }
+              : {};
+            if (!addMode) {
+              for (let i = 0; i < roles.length; i += 1) {
+                if (roles[i].id_role === selectedRole.id_role) {
+                  newElems[i] = { ...roles[i], ...roleModification };
+                  newRole = newElems[i];
+                } else {
+                  newElems[i] = roles[i];
+                }
+              }
             } else {
-              newElems[i] = roles[i];
+              newElems.push(newRole);
             }
+            setRoles(newElems);
+            setLastChangedRole(newRole.id_role);
+            setRoleModification({});
+            $(".modal").modal("hide");
+            addToast({
+              title: addMode ? "Role créé" : "Role modifié",
+              message: (
+                <div>
+                  Le role <b>{newRole.name}</b> a bien été{" "}
+                  {addMode ? "créé" : "modifié"} !
+                </div>
+              ),
+            });
           }
-        } else {
-          newElems.push(newRole);
-        }
-        setRoles(newElems);
-        setLastChangedRole(newRole.id_role);
-        setSelectedRole({});
-        setRoleModification({});
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setNotification({});
-        setLastChangedRole();
-        setSelectedRole({});
-        setIsLoading(false);
-      });
+        })
+        .catch((err) => {
+          console.error(err);
+          setLastChangedRole();
+          setNotification({});
+        })
+        .finally(() => {
+          setSelectedRole({});
+          setIsLoading(false);
+        });
+    } else {
+      setNotification();
+      setLastChangedRole();
+      setSelectedRole({});
+    }
   };
 
   useEffect(() => {
@@ -248,7 +273,7 @@ export default function Roles({
         }
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item">
+        <li id="group1" className="list-group-item management-item management-item-group">
           <div className="management-item-content management-item-group py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -370,12 +395,12 @@ export default function Roles({
             </div>
             <form onSubmit={handleApply}>
               <div className="modal-body mt-3">
-                <Text
+                <Input
                   label="Nom"
                   required
-                  placeholder="Entrez le nom du role ici"
+                  placeHolder="Entrez le nom du role ici"
                   maxChars="255"
-                  errorMessages={[]}
+                  errorMessages={errors}
                   id="name"
                   value={
                     addMode
@@ -392,7 +417,7 @@ export default function Roles({
                   values={permissions}
                   selectedValues={rolePermissions}
                   onChange={handleChange}
-                  errorMessages={[]}
+                  errorMessages={errors}
                 />
               </div>
               <div className="modal-footer justify-content-end">
@@ -414,7 +439,7 @@ export default function Roles({
                   className={`btn btn-${
                     darkMode === 0 ? "warning" : "primary"
                   }`}
-                  data-dismiss="modal"
+                  disabled={!roleModification?.name && !selectedRole?.name}
                 >
                   {addMode ? "Créer" : "Appliquer les modifications"}
                 </button>

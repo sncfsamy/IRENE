@@ -1,8 +1,5 @@
 require("dotenv").config();
-
 const mysql = require("mysql2/promise");
-
-// create a connection pool to the database
 
 const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME } = process.env;
 
@@ -14,8 +11,6 @@ const pool = mysql.createPool({
   database: DB_NAME,
 });
 
-// try a connection
-
 pool.getConnection().catch(() => {
   console.warn(
     "Warning:",
@@ -25,10 +20,7 @@ pool.getConnection().catch(() => {
   );
 });
 
-// declare and fill models: that's where you should register your own managers
-
 const models = {};
-
 const UserManager = require("./UserManager");
 const CommentManager = require("./CommentManager");
 const IdeaManager = require("./IdeaManager");
@@ -46,43 +38,30 @@ const ChallengerManager = require("./ChallengerManager");
 
 models.user = new UserManager();
 models.user.setDatabase(pool);
-
 models.comment = new CommentManager();
 models.comment.setDatabase(pool);
-
 models.idea = new IdeaManager();
 models.idea.setDatabase(pool);
-
 models.categorie = new CategorieManager();
 models.categorie.setDatabase(pool);
-
 models.asset = new AssetManager();
 models.asset.setDatabase(pool);
-
 models.organisation = new OrganisationManager();
 models.organisation.setDatabase(pool);
-
 models.ideaCategorie = new IdeaCategorieManager();
 models.ideaCategorie.setDatabase(pool);
-
 models.author = new AuthorManager();
 models.author.setDatabase(pool);
-
 models.team = new TeamManager();
 models.team.setDatabase(pool);
-
 models.role = new RoleManager();
 models.role.setDatabase(pool);
-
 models.note = new NoteManager();
 models.note.setDatabase(pool);
-
 models.userCategorie = new UserCategorieManager();
 models.userCategorie.setDatabase(pool);
-
 models.challenge = new ChallengeManager();
 models.challenge.setDatabase(pool);
-
 models.challenger = new ChallengerManager();
 models.challenger.setDatabase(pool);
 

@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useContext, useEffect, useState } from "react";
-import Text from "@components/forms/Text";
+import Input from "@components/forms/Input";
 import Select from "@components/forms/Select";
 import Pagination from "@components/Pagination";
 import { useLocation } from "react-router-dom";
@@ -16,11 +16,19 @@ export default function Teams({
   searchFilters,
   setSearchFilters,
 }) {
-  const { teams, organisations, customFetch, darkMode, setIsLoading, user } =
-    useContext(SharedContext);
+  const {
+    teams,
+    organisations,
+    customFetch,
+    darkMode,
+    setIsLoading,
+    user,
+    addToast,
+  } = useContext(SharedContext);
   const [selectedTeam, setSelectedTeam] = useState({});
   const [lastChangedTeam, setLastChangedTeam] = useState();
   const [filteredTeams, setFilteredTeams] = useState([]);
+  const [errors, setErrors] = useState([]);
   const [teamModification, setTeamModification] = useState({
     id_organisation: user.id_organisation,
   });
@@ -43,6 +51,7 @@ export default function Teams({
       setSelectedToDelete(teams.map((team) => team.id_team));
     }
   };
+
   const handleClick = (e) => {
     setNotification();
     setLastChangedTeam();
@@ -54,53 +63,84 @@ export default function Teams({
     );
     setSelectedTeam(teams.find((team) => team.id_team === teamId));
   };
+
   const handleApply = (e) => {
     if (e) {
       e.preventDefault();
     }
-    setIsLoading(true);
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/teams${
-        addMode ? "" : `/${selectedTeam.id_team}`
-      }`,
-      addMode ? "POST" : "PUT",
-      teamModification
-    )
-      .then((response) => {
-        setNotification({
-          success: true,
-          add: addMode,
-          team: teamModification,
-        });
-        const newElems = addMode ? [...teams] : [];
-        let newElem = addMode
-          ? { ...teamModification, id_team: response.id }
-          : {};
-        if (!addMode) {
-          for (let i = 0; i < teams.length; i += 1) {
-            if (teams[i].id_team === selectedTeam.id_team) {
-              newElems[i] = { ...teams[i], ...teamModification };
-              newElem = newElems[i];
+    if (addMode || teamModification.id_organisation || teamModification.name) {
+      setIsLoading(true);
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/teams${
+          addMode ? "" : `/${selectedTeam.id_team}`
+        }`,
+        addMode ? "POST" : "PUT",
+        teamModification
+      )
+        .then((response) => {
+          if (response.errors) {
+            setErrors(response.errors);
+          } else {
+            setNotification({
+              success: true,
+              add: addMode,
+              team: teamModification,
+            });
+            const newElems = addMode ? [...teams] : [];
+            let newElem = addMode
+              ? { ...teamModification, id_team: response.id }
+              : {};
+            if (!addMode) {
+              for (let i = 0; i < teams.length; i += 1) {
+                if (teams[i].id_team === selectedTeam.id_team) {
+                  newElems[i] = { ...teams[i], ...teamModification };
+                  newElem = newElems[i];
+                } else {
+                  newElems[i] = teams[i];
+                }
+              }
             } else {
-              newElems[i] = teams[i];
+              newElems.push(newElem);
             }
+            setTeams(newElems);
+            setLastChangedTeam(newElem.id_team);
+            setTeamModification({});
+            $(".modal").modal("hide");
+            addToast({
+              title: addMode ? "Equipe créée" : "Equipe modifiée",
+              message: (
+                <div>
+                  L'équipe{" "}
+                  <b>
+                    {
+                      organisations.find(
+                        (organisation) =>
+                          organisation.id_organisation ===
+                          newElem.id_organisation
+                      ).name
+                    }{" "}
+                    \ {newElem.name}
+                  </b>{" "}
+                  a bien été {addMode ? "créée" : "modifiée"} !
+                </div>
+              ),
+            });
           }
-        } else {
-          newElems.push(newElem);
-        }
-        setTeams(newElems);
-        setLastChangedTeam(newElem.id_team);
-        setTeamModification({});
-        setSelectedTeam();
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setNotification({});
-        setLastChangedTeam();
-        setSelectedTeam({});
-        setIsLoading(false);
-      });
+        })
+        .catch((err) => {
+          console.error(err);
+          setNotification({});
+          setLastChangedTeam();
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setSelectedTeam({});
+        });
+    } else {
+      setNotification();
+      setTeamModification({});
+      setSelectedTeam();
+    }
   };
 
   useEffect(() => {
@@ -132,6 +172,7 @@ export default function Teams({
       }
     });
   }, []);
+
   useEffect(() => {
     let results = [...teams];
     if (
@@ -162,6 +203,7 @@ export default function Teams({
     setFilteredTeams(results);
     setIsLoading(false);
   }, [searchFilters, teams]);
+
   return (
     <section>
       <p
@@ -213,7 +255,7 @@ export default function Teams({
         }
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item">
+        <li id="group1" className="list-group-item management-item management-item-group">
           <div className="management-item-content management-item-group py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -264,7 +306,7 @@ export default function Teams({
                 <span className="sr-only">
                   Nombre cumulés des membres de cette équipe
                 </span>
-                <i className="icons-document" />
+                <i className="icons-file" />
               </button>
             </div>
           </div>
@@ -365,12 +407,12 @@ export default function Teams({
             </div>
             <form onSubmit={handleApply}>
               <div className="modal-body mt-3">
-                <Text
+                <Input
                   label="Nom"
                   required
-                  placeholder="Entrez le nom de l'équipe ici"
+                  placeHolder="Entrez le nom de l'équipe ici"
                   maxChars="255"
-                  errorMessages={[]}
+                  errorMessages={errors}
                   id="name"
                   value={
                     addMode
@@ -418,7 +460,7 @@ export default function Teams({
                   className={`btn btn-${
                     darkMode === 0 ? "warning" : "primary"
                   }`}
-                  data-dismiss="modal"
+                  disabled={!teamModification?.name && !selectedTeam?.name}
                 >
                   {addMode ? "Créer" : "Appliquer les modifications"}
                 </button>

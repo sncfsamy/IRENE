@@ -2,7 +2,7 @@ import PropTypes from "prop-types";
 import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import SharedContext from "../contexts/sharedContext";
-import Text from "../components/forms/Text";
+import Input from "../components/forms/Input";
 import Modal from "../components/Modal";
 import "../App.css";
 import logo from "../assets/logo_irene.heif";
@@ -79,21 +79,21 @@ export default function Authentification({ setRefreshToken, setIsLogged }) {
               />
             </div>
             <form onSubmit={handleSubmit}>
-              <div className="modal-body d-flex flex-column justify-content-center align-items-center">
+              <div className="modal-body d-flex flex-column justify-content-center align-items-center w-100 px-5">
                 <div className="mx-auto">
-                  <Text
+                  <Input
                     label="Identifiant"
                     id="registration_number"
-                    className="px-2 py-1 border border-warning"
+                    className="border border-warning"
                     onChange={handleChange}
                     value={inputValue.registration_number}
                   />
                 </div>
                 <div className="mx-auto">
-                  <Text
+                  <Input
                     label="Mot de passe"
                     id="password"
-                    className="px-2 py-1 border border-warning"
+                    className="border border-warning"
                     onChange={handleChange}
                     value={inputValue.password}
                     type="password"

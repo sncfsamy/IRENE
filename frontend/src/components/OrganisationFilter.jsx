@@ -59,11 +59,17 @@ export default function OrganisationFilter({ values, onChange, label }) {
                   className={`custom-control-label font-weight-medium ${statusAll}`}
                   htmlFor="organisations"
                 >
-                  {values.length
+                  {values.length &&
+                  organisations.find((organisation) =>
+                    values.includes(organisation.id_organisation)
+                  )
                     ? `${
                         values.length > 1
                           ? `${values.length} organisations sélectionnées`
                           : organisations.find((organisation) =>
+                              values.includes(organisation.id_organisation)
+                            ) &&
+                            organisations.find((organisation) =>
                               values.includes(organisation.id_organisation)
                             ).name
                       }`

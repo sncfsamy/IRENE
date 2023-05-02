@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { useContext, useState, useEffect } from "react";
-import Text from "@components/forms/Text";
+import Input from "@components/forms/Input";
 import Select from "@components/forms/Select";
 import Textarea from "@components/forms/Textarea";
 import DatePicker from "@components/forms/DatePicker";
@@ -36,6 +36,7 @@ export default function Challenges({
     user,
     setIsLoading,
     isLoading,
+    addToast,
   } = useContext(SharedContext);
   const searchParams = {
     organisations: user.id_organisation,
@@ -206,71 +207,104 @@ export default function Challenges({
     if (e) {
       e.preventDefault();
     }
-    setIsLoading(true);
-    const inAddMode = addMode;
-    customFetch(
-      `${import.meta.env.VITE_BACKEND_URL}/challenges${
-        inAddMode ? "" : `/${selectedChallenge.id_challenge}`
-      }`,
-      inAddMode ? "POST" : "PUT",
-      {
-        ...challengeModification,
-        description,
-        started_at:
-          typeof challengeModification.started_at === "string"
-            ? Math.floor(
-                new Date(challengeModification.started_at).getTime() / 1000
-              )
-            : challengeModification.started_at,
-        expired_at:
-          typeof challengeModification.expired_at === "string"
-            ? Math.floor(
-                new Date(challengeModification.expired_at).getTime() / 1000
-              )
-            : challengeModification.expired_at,
-        assets: assetsToReassign,
-      }
-    )
-      .then((response) => {
-        setNotification({
-          success: true,
-          add: inAddMode,
-          challenge: challengeModification,
-        });
-        const newElems = inAddMode ? [...challenges] : [];
-        let newChallenge = inAddMode
-          ? { ...challengeModification, id_challenge: response.id, description }
-          : {};
-        if (!inAddMode) {
-          for (let i = 0; i < challenges.length; i += 1) {
-            if (challenges[i].id_challenge === selectedChallenge.id_challenge) {
-              newElems[i] = {
-                ...challenges[i],
-                ...challengeModification,
-                description,
-              };
-              newChallenge = newElems[i];
-            } else {
-              newElems[i] = challenges[i];
-            }
-          }
-        } else {
-          newElems.push(newChallenge);
+    if (
+      addMode ||
+      challengeModification.name ||
+      challengeModification.description ||
+      challengeModification.challengers
+    ) {
+      setIsLoading(true);
+      const inAddMode = addMode;
+      customFetch(
+        `${import.meta.env.VITE_BACKEND_URL}/challenges${
+          inAddMode ? "" : `/${selectedChallenge.id_challenge}`
+        }`,
+        inAddMode ? "POST" : "PUT",
+        {
+          ...challengeModification,
+          description,
+          started_at:
+            typeof challengeModification.started_at === "string"
+              ? Math.floor(
+                  new Date(challengeModification.started_at).getTime() / 1000
+                )
+              : challengeModification.started_at,
+          expired_at:
+            typeof challengeModification.expired_at === "string"
+              ? Math.floor(
+                  new Date(challengeModification.expired_at).getTime() / 1000
+                )
+              : challengeModification.expired_at,
+          assets: assetsToReassign,
         }
-        setChallenges(newElems);
-        setLastChangedRole(newChallenge.id_challenge);
-        setSelectedChallenge({});
-        setChallengeModification({});
-        setDescription(null);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setNotification({});
-        setLastChangedRole();
-        setSelectedChallenge({});
-        setIsLoading(false);
-      });
+      )
+        .then((response) => {
+          if (response.errors) {
+            setErrors(response.errors);
+          } else {
+            setNotification({
+              success: true,
+              add: inAddMode,
+              challenge: challengeModification,
+            });
+            const newElems = inAddMode ? [...challenges] : [];
+            let newChallenge = inAddMode
+              ? {
+                  ...challengeModification,
+                  id_challenge: response.id,
+                  description,
+                }
+              : {};
+            if (!inAddMode) {
+              for (let i = 0; i < challenges.length; i += 1) {
+                if (
+                  challenges[i].id_challenge === selectedChallenge.id_challenge
+                ) {
+                  newElems[i] = {
+                    ...challenges[i],
+                    ...challengeModification,
+                    description,
+                  };
+                  newChallenge = newElems[i];
+                } else {
+                  newElems[i] = challenges[i];
+                }
+              }
+            } else {
+              newElems.push(newChallenge);
+            }
+            setChallenges(newElems);
+            setLastChangedRole(newChallenge.id_challenge);
+            setSelectedChallenge({});
+            setChallengeModification({});
+            setDescription(null);
+            setIsLoading(false);
+            $(".modal").modal("hide");
+            addToast({
+              title: addMode ? "Challenge créé" : "Challenge modifié",
+              message: (
+                <div>
+                  Le challenge <b>{newChallenge.name}</b> a bien été{" "}
+                  {addMode ? "créé" : "modifié"} !
+                </div>
+              ),
+            });
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          setNotification({});
+          setLastChangedRole();
+        })
+        .finally(() => {
+          setSelectedChallenge({});
+          setIsLoading(false);
+        });
+    } else {
+      setNotification();
+      setLastChangedRole();
+      setSelectedChallenge({});
+    }
   };
 
   useEffect(() => {
@@ -409,7 +443,7 @@ export default function Challenges({
         }
       />
       <ul className="list-group">
-        <li id="group1" className="list-group-item management-item">
+        <li id="group1" className="list-group-item management-item  management-item-group">
           <div className="management-item-content management-item-group py-0">
             <div className="management-item-symbol ml-5 d-flex align-items-center">
               <div className="custom-control custom-checkbox align-middle">
@@ -442,7 +476,7 @@ export default function Challenges({
                 data-content="Nombre d'innovations participantes à ce challenge"
               >
                 <span className="sr-only">P</span>
-                <i className="icons-document" />
+                <i className="icons-file" />
               </button>
             </div>
             <div className="management-item-symbol text-left">
@@ -458,7 +492,7 @@ export default function Challenges({
                 <span className="sr-only">
                   Nombre d'innovations sélectionnées pour ce challenge.
                 </span>
-                <i className="icons-document" />
+                <i className="icons-file text-warning" />
               </button>
             </div>
             <div className="management-item-symbol text-left">
@@ -474,7 +508,7 @@ export default function Challenges({
                 <span className="sr-only">
                   Nombre d'innovations ayant gagné ce challenge.
                 </span>
-                <i className="icons-document" />
+                <i className="icons-file text-success" />
               </button>
             </div>
           </div>
@@ -599,12 +633,12 @@ export default function Challenges({
             </div>
             <form onSubmit={handleApply}>
               <div className="modal-body mt-3">
-                <Text
+                <Input
                   label="Nom"
                   required
-                  placeholder="Entrez le nom du challenge ici"
+                  placeHolder="Entrez le nom du challenge ici"
                   maxChars="255"
-                  errorMessages={[]}
+                  errorMessages={errors}
                   id="name"
                   value={
                     addMode
@@ -716,7 +750,7 @@ export default function Challenges({
                     required
                     id="description"
                     useAdvancedEditor
-                    errorMessages={[]}
+                    errorMessages={errors}
                     setAssetsToReassign={setAssetsToReassign}
                     extraData={{
                       id_challenge: addMode
@@ -832,14 +866,7 @@ export default function Challenges({
                   className={`btn btn-${
                     darkMode === 0 ? "warning" : "primary"
                   }`}
-                  data-dismiss="modal"
-                  disabled={
-                    !(
-                      challengeModification &&
-                      challengeModification.name &&
-                      description
-                    )
-                  }
+                  disabled={!(challengeModification?.name && description)}
                 >
                   {addMode ? "Créer" : "Appliquer les modifications"}
                 </button>

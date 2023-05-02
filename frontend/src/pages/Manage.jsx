@@ -23,7 +23,7 @@ export default function Manage({
   setRoles,
   setCategories,
 }) {
-  const { user, setIsLoading, customFetch, darkMode } =
+  const { user, setIsLoading, customFetch, darkMode, addToast } =
     useContext(SharedContext);
   const [selectedToDelete, setSelectedToDelete] = useState([]);
   const location = useLocation();
@@ -99,6 +99,12 @@ export default function Manage({
         removeCallbacks.current[component]([...selectedToDelete]);
         setSelectedToDelete([]);
         setIsLoading(false);
+        addToast({
+          title: "Suppression effectuée",
+          message: (
+            <div>Tous les éléments sélectionnés ont bien été supprimés !</div>
+          ),
+        });
       })
       .catch((err) => {
         console.warn(err);
@@ -139,7 +145,13 @@ export default function Manage({
           style={{ justifyContent: "center", height: "fit-content" }}
         >
           <div className="actionbar-head my-3">
-            <h1 className="mb-0">Mon espace de gestion</h1>
+            <h1 className="display-1 mb-0">
+              <i
+                className="icons-admin icons-size-2x mx-2"
+                aria-hidden="true"
+              />
+              Mon espace de gestion
+            </h1>
             <ul className="toolbar mb-0 d-flex">
               <li className="toolbar-item">
                 <button

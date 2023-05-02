@@ -12,7 +12,7 @@ export default function SkillSearch() {
     searchParams.has("search_terms") ? searchParams.get("search_terms") : ""
   );
   const [iconHover, setIconHover] = useState();
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState();
   const hoverIcon = (e) => {
     setIconHover(e.target.dataset.target);
   };
@@ -25,15 +25,12 @@ export default function SkillSearch() {
     customFetch(`${import.meta.env.VITE_BACKEND_URL}/skills?${searchParams}`)
       .then((results) => {
         setSearchResults(results);
-        if (results.length === 0) {
-          setSearchResults();
-        }
-        setIsLoading(false);
       })
       .catch((err) => {
         console.warn(err);
-        setIsLoading(false);
-      });
+        setSearchResults([]);
+      })
+      .finally(() => setIsLoading(false));
   };
   const blurIcon = () => {
     setIconHover();
@@ -46,7 +43,7 @@ export default function SkillSearch() {
       setSearchParams(searchParams);
     } else {
       setIsLoading(false);
-      setSearchResults([]);
+      setSearchResults();
     }
   };
   useEffect(() => setIsLoading(false), []);
@@ -89,7 +86,14 @@ export default function SkillSearch() {
           {" "}
           <form onSubmit={handleSubmit} className="my-5">
             <div className="input-group">
-              <div className="form-control-container">
+              <div
+                className={`form-control-container${
+                  searchResults &&
+                  (!searchResults.users || searchResults?.users?.length === 0)
+                    ? " is-invalid"
+                    : ""
+                }`}
+              >
                 <input
                   type="text"
                   className="form-control"
@@ -103,19 +107,30 @@ export default function SkillSearch() {
               <div className="input-group-append">
                 <button
                   type="submit"
-                  className={`btn btn-${
-                    darkMode === 0 ? "warning" : "primary"
+                  className={`btn rounded-right btn-${
+                    darkMode ? "primary" : "warning"
                   }`}
                 >
                   <span className="d-none d-sm-inline">Rechercher </span>
                   <i className="icons-search" aria-hidden="false" />
                 </button>
               </div>
+              {searchResults &&
+              (!searchResults.users || searchResults?.users?.length === 0) ? (
+                <div
+                  className="invalid-feedback d-block"
+                  id="inputGroupPrepend"
+                >
+                  Votre recherche n'a retourné aucun résultat !
+                </div>
+              ) : (
+                ""
+              )}
             </div>
           </form>
         </div>
         <div className="Skills-display mt-2">
-          {searchResults.users && searchResults.users.length ? (
+          {searchResults?.users && searchResults?.users.length ? (
             <>
               <Pagination
                 searchFilters={searchParams}

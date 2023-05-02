@@ -7,7 +7,8 @@ const status = [
   "Attente de validation manager",
   "Attente de validation ambassadeur",
   "Cloturée avec succès",
-  "Refusée ou en attente d'approfondissement",
+  "En attente d'approfondissement",
+  "Refusée",
 ];
 export default function StatusFilter({ values, onChange, label }) {
   const { darkMode } = useContext(SharedContext);

@@ -2,12 +2,18 @@ import React, { useState, useEffect, useMemo } from "react";
 import { BrowserRouter } from "react-router-dom";
 import ModalRgpd from "@components/ModalRgpd";
 import loader from "@assets/loading.webp";
-import colorMode from "./colorMode";
+import logoIreneDarkOn from "@assets/logo_dark_on.heif";
 import SharedContext from "./contexts/sharedContext";
 import AuthenticatedApp from "./App/AuthenticatedApp";
 import UnAuthenticatedApp from "./App/UnAuthenticatedApp";
 import Loader from "./components/Loader";
+import Toast from "./class/Toast";
 
+function colorMode() {
+  const dm = parseInt(localStorage.getItem("IRENE_DARKMODE"), 10);
+  return (!Number.isNaN(dm) && dm) || 0;
+}
+window.toasts = new Toast();
 function App() {
   const [user, setUser] = useState();
   const [organisations, setOrganisations] = useState([]);
@@ -16,13 +22,14 @@ function App() {
   const [teams, setTeams] = useState([]);
   const [isLogged, setIsLogged] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [toastsShowed, setToastsShowed] = useState([]);
   const [darkMode, setDarkMode] = useState(colorMode());
   const [refreshToken, setRefreshToken] = useState(
     localStorage.getItem("IRENE_TOKEN")
   );
 
   const customFetch = (url, method = "GET", data = null, noHeaders = false) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const options = {
         method,
         credentials: "include",
@@ -37,14 +44,14 @@ function App() {
 
       fetch(url, options)
         .then(async (response) => {
+          let toReturn = null;
           const contentType = response.headers.get("content-type");
           if (response.ok) {
-            resolve(
+            toReturn =
               contentType && contentType.includes("application/json")
                 ? response.json()
-                : {}
-            );
-          } else {
+                : {};
+          } else if (response && typeof response === "string") {
             const responseData = await response.json();
             if (responseData && responseData.expired) {
               const response2 = await fetch(
@@ -69,44 +76,64 @@ function App() {
                     ? response3.json()
                     : {};
                 if (response3.ok) {
-                  resolve(reponseToSend);
+                  toReturn = reponseToSend;
                 } else {
                   setIsLogged(false);
                   setUser();
                   setRefreshToken();
-                  reject(reponseToSend);
+                  toReturn = reponseToSend;
                 }
               } else {
                 setIsLogged(false);
                 setUser();
                 setRefreshToken();
-                reject(new Error({ errors: { msg: "Bad removal" } }));
+                toReturn = null;
               }
             } else if (responseData && responseData.loggedOut) {
               setIsLogged(false);
               setUser();
-              reject(new Error(responseData));
-            } else if (responseData) {
-              reject(new Error(responseData));
-            } else {
-              reject(new Error(response));
+              toReturn = responseData;
+            } else if (!responseData) {
+              toReturn = response;
             }
+          } else {
+            toReturn = null;
           }
+          return toReturn;
         })
         .then((responseData) => {
           if (responseData && responseData.loggedOut) {
             setIsLogged(false);
             setUser();
-            reject(new Error({}));
-          } else {
-            resolve(responseData);
-          }
+            resolve([]);
+          } else if (responseData) resolve(responseData);
+          else resolve([]);
         })
-        .catch(async (response) => {
-          console.warn("Error: ", response);
-          reject(new Error({}));
+        .catch((err) => {
+          console.warn(err);
+          resolve([]);
         });
     });
+  };
+
+  const addToast = (toastData) => {
+    window.toasts.addToast(toastData);
+    setToastsShowed(window.toasts.getToasts());
+    setTimeout(() => {
+      const toast =
+        window.toasts.getToasts()[window.toasts.getToasts().length - 1];
+      $(`#toast_${toast.id}`)
+        .toast({ animation: true, autohide: true, delay: 8000 })
+        .toast("show")
+        .on("hidden.bs.toast", () => {
+          $(`#toast_${toast.id}`).toast("dispose");
+          $(`#toast_${toast.id}`).hide();
+          window.toasts.removeToast(toast.id);
+        });
+    }, 250);
+    setTimeout(() => {
+      setToastsShowed(window.toasts.getToasts());
+    }, 8500);
   };
 
   function toggleDarkmode() {
@@ -219,11 +246,55 @@ function App() {
       isLogged,
       customFetch,
       setIsLoading,
+      addToast,
     }),
     [user, categories, organisations, teams, roles, darkMode, isLogged]
   );
   return (
     <div className="App">
+      {toastsShowed.length ? (
+        <div
+          className="position-fixed h-100"
+          style={{ top: "64px", right: 0, zIndex: 1072 }}
+        >
+          {toastsShowed.map((toast) => (
+            <div
+              className={`toast ${darkMode === 2 ? "bg-gray" : ""}`}
+              role="alert"
+              aria-live="assertive"
+              aria-atomic="true"
+              id={`toast_${toast.id}`}
+              key={toast.id}
+            >
+              <div className="toast-header bg-warning text-dark">
+                <img
+                  src={logoIreneDarkOn}
+                  className="rounded mr-2"
+                  style={{ width: "50px" }}
+                  alt="Irene notification"
+                />
+                <strong
+                  className={`mr-auto ${darkMode === 2 ? "text-dark" : ""}`}
+                >
+                  {toast.title}
+                </strong>
+                <small className="text-dark">À l'instant</small>
+                <button
+                  type="button"
+                  className="ml-2 mb-1 close text-dark"
+                  data-dismiss="toast"
+                  aria-label="Fermer"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div className="toast-body">{toast.message}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        ""
+      )}
       <SharedContext.Provider value={memoizedValues}>
         <BrowserRouter>
           {user ? (

@@ -28,9 +28,13 @@ class IdeaManager extends AbstractManager {
   }
 
   findAll(searchFilters, orderParams, limit, offset) {
-    const initialSql = searchFilters.find((sf) => sf.column === "a.id_user")
-      ? `SELECT DISTINCT i.id_idea,i.name,i.description,i.note,i.noted_by,i.id_organisation,i.status,i.views,i.created_at,i.finished_at,i.manager_validated_at,i.ambassador_validated_at,(SELECT JSON_OBJECT('file_name', asset.file_name) FROM ${this.join.asset} AS asset WHERE asset.field = 0 AND asset.${this.id} = i.id_idea) AS poster`
-      : `SELECT i.id_idea,i.name,i.description,i.note,i.noted_by,i.id_organisation,i.views,i.status,i.created_at,i.finished_at,i.manager_validated_at,i.ambassador_validated_at,(SELECT JSON_OBJECT('file_name', asset.file_name) FROM ${this.join.asset} AS asset WHERE asset.field = 0 AND asset.${this.id} = i.id_idea) AS poster `;
+    const initialSql = `SELECT${
+      searchFilters.find((sf) => sf.column === "a.id_user") ? " DISTINCT" : ""
+    } i.id_idea,i.name,i.description,i.note,i.noted_by,i.id_organisation,i.views,i.status,i.created_at,i.finished_at,i.manager_validated_at,i.ambassador_validated_at,(SELECT JSON_OBJECT('file_name', asset.file_name) FROM ${
+      this.join.asset
+    } AS asset WHERE asset.field = 0 AND asset.${
+      this.id
+    } = i.id_idea) AS poster `;
     const sqlData = [
       ...searchFilters
         .filter((filter) => filter.operator !== "IN")
@@ -66,8 +70,8 @@ class IdeaManager extends AbstractManager {
       },
       initialSql +
         (searchFilters.find((sf) => sf.column === "a.id_user")
-          ? ` FROM ${this.join.author} AS a JOIN ${this.table} AS i ON i.id_idea = a.id_idea`
-          : ` FROM  ${this.table} AS i`)
+          ? `FROM ${this.join.author} AS a JOIN ${this.table} AS i ON i.id_idea = a.id_idea`
+          : `FROM ${this.table} AS i`)
     );
 
     query += `${
@@ -79,9 +83,9 @@ class IdeaManager extends AbstractManager {
           )
         : " ORDER BY created_at DESC"
     }`;
-
+    
     return [
-      this.database.query(`${query}  LIMIT ? OFFSET ?`, sqlData),
+      this.database.query(`${query} LIMIT ? OFFSET ?`, sqlData),
       this.database.query(
         `SELECT COUNT(*) AS total ${query.replace(initialSql, "")}`,
         sqlData

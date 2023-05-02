@@ -99,9 +99,9 @@ export default function Header({ setDarkMode, setUser, setIsLogged }) {
           >
             <img
               src={
-                darkMode === 0
-                  ? `${isLogoHover ? logoIreneDarkOn : logoIreneDarkOff}`
-                  : `${isLogoHover ? logoIreneOn : logoIreneOff}`
+                darkMode
+                  ? `${isLogoHover ? logoIreneOn : logoIreneOff}`
+                  : `${isLogoHover ? logoIreneDarkOn : logoIreneDarkOff}`
               }
               height="60px"
               alt="IRENE"

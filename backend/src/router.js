@@ -41,6 +41,7 @@ router.use(auth.verifyToken);
 router.use("/uploads", express.static(path.join("./", "uploads")));
 
 //  users routes
+router.get("/users/search", userControllers.searchUsers);
 router.get("/skills", userControllers.browseSkills);
 router.get(
   "/users",

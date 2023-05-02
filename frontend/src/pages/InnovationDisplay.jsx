@@ -59,6 +59,7 @@ export default function InnovationDisplay() {
     setIsLoading,
     darkMode,
     customFetch,
+    addToast,
   } = useContext(SharedContext);
   const [notesHover, setNotesHover] = useState(0);
   const [modalAction, setModalAction] = useState({});
@@ -277,13 +278,52 @@ export default function InnovationDisplay() {
                 if (modalAction.action === "validateManager") {
                   newIdea.status = 2;
                   newIdea.manager_validated_at = new Date().getTime() / 1000;
+                  addToast({
+                    title: "Innovation validée",
+                    message: (
+                      <div>
+                        Votre validation de l'innovation "
+                        <b>{ideaData.idea.name}</b>" a bien été prise en compte
+                        !
+                      </div>
+                    ),
+                  });
                 } else if (modalAction.action === "validateAmbassador") {
                   newIdea.status = 3;
                   newIdea.ambassador_validated_at = new Date().getTime() / 1000;
+                  addToast({
+                    title: "Innovation validée",
+                    message: (
+                      <div>
+                        Votre validation de l'innovation "
+                        <b>{ideaData.idea.name}</b>" a bien été prise en compte
+                        !
+                      </div>
+                    ),
+                  });
                 } else if (modalAction.action === "deepen") {
                   newIdea.status = 4;
+                  addToast({
+                    title: "Innovation modifiée",
+                    message: (
+                      <div>
+                        Votre demande d'approfondissement de l'innovation "
+                        <b>{ideaData.idea.name}</b>" a bien été prise en compte
+                        !
+                      </div>
+                    ),
+                  });
                 } else if (modalAction.action === "reject") {
                   newIdea.status = 5;
+                  addToast({
+                    title: "Innovation modifiée",
+                    message: (
+                      <div>
+                        Votre refus de l'innovation "<b>{ideaData.idea.name}</b>
+                        " a bien été pris en compte !
+                      </div>
+                    ),
+                  });
                 }
                 setIdeaData({
                   ...ideaData,
@@ -311,6 +351,14 @@ export default function InnovationDisplay() {
       customFetch(`${import.meta.env.VITE_BACKEND_URL}/ideas/${id}`, "DELETE")
         .then(() => {
           $(".modal").modal("hide");
+          addToast({
+            title: "Innovation supprimée",
+            message: (
+              <div>
+                IRENE a oublié l'innovation "<b>{ideaData.idea.name}</b>" !
+              </div>
+            ),
+          });
           navigate(`${import.meta.env.VITE_FRONTEND_URI}/`);
         })
         .catch((err) => console.warn(err));
@@ -437,7 +485,7 @@ export default function InnovationDisplay() {
               >
                 <h1 className="rounded-top font-weight-bold p-2 display-1">
                   <i
-                    className="icons-document icons-size-3x mx-2"
+                    className="icons-large-lightbulb icons-size-3x mx-2"
                     aria-hidden="true"
                   />
                   Idée #{ideaData.idea.id_idea} -{" "}
